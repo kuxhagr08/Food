@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Browse Restaurants — QuickBite{% endblock %}
+
+{% block extra_css %}
+<style>
+.filter-bar {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.75rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page-section">
+
+  <!-- Page Header -->
+  <div class="section-header" style="margin-bottom:1.5rem;">
+    <div>
+      <h1 class="section-title">
+        {% if search_query %}
+          Results for "{{ search_query }}"
+        {% elif selected_category %}
+          {{ selected_category|title }} Restaurants
+        {% else %}
+          All Restaurants
+        {% endif %}
+      </h1>
+      <p class="section-subtitle">{{ restaurants|length }} restaurant{% if restaurants|length != 1 %}s{% endif %} found</p>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <form method="GET" action="{% url 'restaurants:list' %}"
+          style="display:flex;flex-wrap:wrap;gap:0.85rem;align-items:center;">
+      <div style="flex:1;min-width:220px;">
+        <input type="text" name="q" value="{{ search_query }}" class="form-input"
+               placeholder="🔍  Search restaurants or dishes...">
+      </div>
+      <div style="min-width:155px;">
+        <select name="category" class="form-select" onchange="this.form.submit()">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+            <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
+              {{ cat.icon|default:'' }} {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="min-width:155px;">
+        <select name="sort" class="form-select" onchange="this.form.submit()">
+          <option value="rating" {% if selected_sort == 'rating' %}selected{% endif %}>⭐ Rating: High–Low</option>
+          <option value="time" {% if selected_sort == 'time' %}selected{% endif %}>⚡ Fastest Delivery</option>
+          <option value="min_order" {% if selected_sort == 'min_order' %}selected{% endif %}>💰 Min Order</option>
+        </select>
+      </div>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:600;font-size:0.88rem;white-space:nowrap;min-height:44px;">
+        <input type="checkbox" name="veg" value="1" {% if veg_only %}checked{% endif %}
+               onchange="this.form.submit()"
+               style="width:18px;height:18px;accent-color:var(--veg-color);">
+        <span class="food-type-icon veg"></span>
+        <span>Veg Only</span>
+      </label>
+      <div style="display:flex;gap:0.5rem;">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        {% if search_query or selected_category or veg_only %}
+          <a href="{% url 'restaurants:list' %}" class="btn btn-outline btn-sm">Reset</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Restaurant Grid -->
+  {% if restaurants %}
+    <div class="restaurant-grid stagger">
+      {% for restaurant in restaurants %}
+        <a href="{% url 'restaurants:detail' restaurant.slug %}" class="restaurant-card" style="border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);transition:all 0.25s var(--ease-out);">
+          <div style="position:relative;aspect-ratio:16/9;overflow:hidden;background:#e2e8f0;">
+            <img src="{{ restaurant.display_banner }}" alt="{{ restaurant.name }}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.4s ease;" loading="lazy">
+            <span class="restaurant-badge-time" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.75);color:#fff;padding:3px 8px;border-radius:var(--radius-sm);font-size:0.75rem;font-weight:700;">⏱ {{ restaurant.avg_prep_time_mins }} mins</span>
+            <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);padding:1.2rem 0.75rem 0.5rem;color:#fff;font-family:var(--font-display);font-weight:800;font-size:0.88rem;">
+              🏷️ {{ restaurant.offer_tag }}
+            </div>
+          </div>
+          <div class="restaurant-body">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.3rem;">
+              <div class="restaurant-title">{{ restaurant.name }}</div>
+              <span class="rating-badge">★ {{ restaurant.rating }}</span>
+            </div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              {{ restaurant.cuisines_list }}
+            </div>
+            <div class="restaurant-meta">
+              <span>Min ₹{{ restaurant.min_order_amount|floatformat:0 }}</span>
+              <span>•</span>
+              <span>{{ restaurant.menu_items.count }} items</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0;">
+              📍 {{ restaurant.address }}
+            </p>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">🔍</span>
+      <h3>No restaurants found</h3>
+      <p>Try a different dish, cuisine or clear your filters.</p>
+      <a href="{% url 'restaurants:list' %}" class="btn btn-primary" style="margin-top:1rem;">View All →</a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

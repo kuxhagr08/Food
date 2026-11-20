@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">User Accounts & Permissions</h1>
+      <a href="{% url 'core:admin_dashboard' %}" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Admin Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Role Filters -->
+  <div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+    <form method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+      <div style="flex: 1; min-width: 220px;">
+        <input type="text" name="q" value="{{ search_query }}" class="form-input" placeholder="Search by name, email, or phone...">
+      </div>
+      <div style="min-width: 180px;">
+        <select name="role" class="form-select" onchange="this.form.submit()">
+          <option value="">All Roles</option>
+          <option value="customer" {% if role_filter == 'customer' %}selected{% endif %}>Customer</option>
+          <option value="delivery_partner" {% if role_filter == 'delivery_partner' %}selected{% endif %}>Delivery Partner</option>
+          <option value="kitchen_staff" {% if role_filter == 'kitchen_staff' %}selected{% endif %}>Kitchen Staff</option>
+          <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if search_query or role_filter %}
+        <a href="{% url 'core:admin_users' %}" class="btn btn-outline btn-sm">Reset</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Users Table -->
+  <div class="card" style="padding: 1rem; overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">
+          <th style="padding: 0.75rem 0.5rem;">User</th>
+          <th style="padding: 0.75rem 0.5rem;">Role</th>
+          <th style="padding: 0.75rem 0.5rem;">Phone</th>
+          <th style="padding: 0.75rem 0.5rem;">Online Status</th>
+          <th style="padding: 0.75rem 0.5rem;">Account Status</th>
+          <th style="padding: 0.75rem 0.5rem; text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.75rem 0.5rem;">
+              <div style="font-weight: 700;">{{ u.get_full_name|default:"(No name)" }}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">{{ u.email }}</div>
+            </td>
+            <td style="padding: 0.75rem 0.5rem;">
+              <span class="role-pill {{ u.role }}">{{ u.get_role_display }}</span>
+            </td>
+            <td style="padding: 0.75rem 0.5rem; color: var(--text-muted);">{{ u.phone|default:'—' }}</td>
+            <td style="padding: 0.75rem 0.5rem;">
+              {% if u.role == 'delivery_partner' %}
+                {% if u.is_online %}
+                  <span style="color: var(--success); font-weight: 700; font-size: 0.85rem;">🟢 Online</span>
+                {% else %}
+                  <span style="color: var(--text-light); font-size: 0.85rem;">⚪ Offline</span>
+                {% endif %}
+              {% else %}
+                <span style="color: var(--text-light);">—</span>
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 0.5rem;">
+              {% if u.is_active %}
+                <span style="color: var(--success); font-weight: 600; font-size: 0.85rem;">Active</span>
+              {% else %}
+                <span style="color: var(--danger); font-weight: 600; font-size: 0.85rem;">Blocked</span>
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: right;">
+              <form method="POST" action="{% url 'core:admin_toggle_user' u.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm {% if u.is_active %}btn-outline{% else %}btn-success{% endif %}" style="font-size: 0.75rem; min-height: 28px; padding: 2px 8px;">
+                  {% if u.is_active %}Block User{% else %}Activate{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

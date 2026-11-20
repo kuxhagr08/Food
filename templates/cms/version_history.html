@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Change History: {{ page.title }} - QuickBite{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 5rem; max-width: 900px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">Change History: {{ page.title }}</h1>
+      <div style="color: var(--text-muted); font-size: 0.9rem;">
+        Route: <code>{{ page.route }}</code> &nbsp;•&nbsp; Currently active: <strong>v{{ page.current_version }}</strong>
+      </div>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="{% url 'cms:visual_editor' page.id %}" class="btn btn-primary btn-sm">🎨 Open Visual Editor</a>
+      <a href="{% url 'cms:pages_list' %}" class="btn btn-outline btn-sm">&larr; Back to Pages</a>
+    </div>
+  </div>
+
+  <div class="card" style="padding: 1.25rem; overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">
+          <th style="padding: 0.75rem 0.5rem;">Version</th>
+          <th style="padding: 0.75rem 0.5rem;">Saved At</th>
+          <th style="padding: 0.75rem 0.5rem;">Author</th>
+          <th style="padding: 0.75rem 0.5rem;">What Changed?</th>
+          <th style="padding: 0.75rem 0.5rem; text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ver in versions %}
+          <tr style="border-bottom: 1px solid var(--border-color); {% if ver.version_number == page.current_version %}background: #f0fdf4;{% endif %}">
+            <td style="padding: 0.75rem 0.5rem; font-weight: 800;">
+              v{{ ver.version_number }}
+              {% if ver.version_number == page.current_version %}
+                <span style="background: var(--success); color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">CURRENT</span>
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+              {{ ver.created_at|date:"d M Y, h:i A" }}
+            </td>
+            <td style="padding: 0.75rem 0.5rem;">
+              {{ ver.created_by.get_full_name|default:ver.created_by.email|default:'System' }}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; font-style: italic; color: #374151;">
+              "{{ ver.change_summary }}"
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: right;">
+              {% if ver.version_number != page.current_version %}
+                <button type="button" class="btn btn-outline btn-sm" style="color: var(--brand-1); border-color: var(--brand-1); min-height: 32px; padding: 2px 10px;" onclick="rollbackToVersion({{ ver.version_number }})">
+                  ↩ Rollback
+                </button>
+              {% else %}
+                <span style="color: var(--success); font-weight: 600; font-size: 0.85rem;">Active</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+async function rollbackToVersion(versionNum) {
+  if (!confirm(`Are you sure you want to rollback ${"{{ page.title }}"} to Version ${versionNum}? A new version will be published with those contents.`)) {
+    return;
+  }
+
+  const res = await fetch(`/cms/api/editor/{{ page.id }}/rollback/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ target_version: versionNum })
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    showToast(data.message, "success");
+    window.location.reload();
+  } else {
+    showToast(data.error || "Rollback failed", "error");
+  }
+}
+</script>
+{% endblock %}
+

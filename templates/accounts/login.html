@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign In — QuickBite{% endblock %}
+
+{% block extra_css %}
+<style>
+.auth-page {
+  min-height: calc(100dvh - var(--header-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem 4rem;
+  background: radial-gradient(ellipse at top, rgba(255,59,92,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at bottom-right, rgba(108,71,255,0.06) 0%, transparent 50%);
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.auth-card-header {
+  background: var(--grad-hero);
+  padding: 2.25rem 2rem 1.75rem;
+  text-align: center;
+  color: #fff;
+}
+.auth-card-body { padding: 2rem; }
+.demo-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-color); background: var(--bg-card);
+  font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s ease; text-align: left;
+  font-family: var(--font-display);
+}
+.demo-btn:hover { border-color: var(--brand-1); color: var(--brand-1); background: var(--brand-1-light); }
+.demo-btn.superuser { background: #0f0a1e; color: #60a5fa; border-color: #1e3a8a; width: 100%; justify-content: center; }
+.demo-btn.superuser:hover { border-color: #3b82f6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card animate-scale-in">
+
+    <!-- Header -->
+    <div class="auth-card-header">
+      <div style="font-size:2.5rem;margin-bottom:0.5rem;">👋</div>
+      <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:0.3rem;">Welcome back!</h1>
+      <p style="color:rgba(255,255,255,0.65);font-size:0.9rem;margin:0;">Sign in to your QuickBite account</p>
+    </div>
+
+    <div class="auth-card-body">
+      <!-- Demo Logins -->
+      <div style="background:var(--bg-subtle);border-radius:var(--radius-md);padding:1rem;margin-bottom:1.5rem;border:1px solid var(--border-color);">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">
+          ⚡ Instant Demo Logins (Click to Autofill)
+        </div>
+        <button class="demo-btn superuser" onclick="fillLogin('kuxhagr','12345678')" style="margin-bottom:0.6rem;">
+          👑 Superuser: kuxhagr / 12345678 &nbsp;<span style="font-size:0.7rem;opacity:0.6;">(Full Access)</span>
+        </button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+          <button class="demo-btn" onclick="fillLogin('admin@quickbite.com','admin123')">🔑 Admin</button>
+          <button class="demo-btn" onclick="fillLogin('kitchen1@quickbite.com','kitchen123')">🍳 Kitchen</button>
+          <button class="demo-btn" onclick="fillLogin('partner1@quickbite.com','partner123')">🛵 Delivery</button>
+          <button class="demo-btn" onclick="fillLogin('rahul@example.com','customer123')">👤 Customer</button>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form method="POST" action="{% url 'accounts:login' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="username" id="emailInput" class="form-input"
+                 placeholder="name@example.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" id="passwordInput" class="form-input"
+                 placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem;font-size:1rem;">
+          Sign In →
+        </button>
+      </form>
+
+      <div style="text-align:center;margin-top:1.5rem;font-size:0.9rem;color:var(--text-muted);">
+        Don't have an account?
+        <a href="{% url 'accounts:register' %}" style="color:var(--brand-1);font-weight:700;">Sign up free</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillLogin(email, password) {
+  document.getElementById('emailInput').value = email;
+  document.getElementById('passwordInput').value = password;
+  if (typeof showToast === 'function') showToast('Autofilled: ' + email, 'info', 1500);
+}
+</script>
+{% endblock %}

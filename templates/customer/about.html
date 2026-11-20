@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load cms_tags %}
+
+{% block title %}About Us - QuickBite{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 3rem; padding-bottom: 5rem; max-width: 800px;">
+  <div class="card" style="padding: 2.5rem;">
+    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 1rem; color: var(--secondary);">
+      {% cms_block '/about/' 'page_title' 'About QuickBite' %}
+    </h1>
+    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--brand-1); margin-bottom: 1.25rem;">
+      {% cms_block '/about/' 'story_title' 'Built for Food Lovers & Lightning-Fast Deliveries' %}
+    </h3>
+    <div style="font-size: 1.05rem; line-height: 1.8; color: #374151;">
+      {% cms_block '/about/' 'story_body' 'Founded in 2026, QuickBite bridges the distance between hungry food lovers and artisanal kitchen masters. Our hyper-local dispatch engine, integrated kitchen display systems (KDS), and live WebSocket routing ensure that every meal reaches your dining table piping hot.' %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,235 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Editor: {{ page.title }} (v{{ page.current_version }})</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <style>
+    body { padding-bottom: 0 !important; overflow: hidden; }
+  </style>
+</head>
+<body class="visual-editor-shell">
+
+  <!-- Top Editor Toolbar -->
+  <header class="editor-top-bar">
+    <!-- Left: Page Info & Back -->
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="{% url 'cms:pages_list' %}" class="btn btn-outline btn-sm" style="color: #fff; border-color: #475569;">
+        &larr; Exit Editor
+      </a>
+      <div>
+        <span style="font-weight: 800; font-size: 1.05rem;">{{ page.title }}</span>
+        <span class="role-pill" style="background: #334155; color: #38bdf8; margin-left: 6px; font-size: 0.75rem;" id="versionBadge">
+          v{{ page.current_version }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Center: Viewport Switcher -->
+    <div style="display: flex; align-items: center; gap: 0.5rem; background: #0f172a; padding: 4px; border-radius: var(--radius-md);">
+      <button type="button" class="btn btn-sm btn-outline device-btn active" id="btnDesktop" onclick="setViewport('desktop')" title="Desktop View (100%)">
+        🖥️ Desktop
+      </button>
+      <button type="button" class="btn btn-sm btn-outline device-btn" id="btnTablet" onclick="setViewport('tablet')" title="Tablet View (768px)">
+        📱 Tablet
+      </button>
+      <button type="button" class="btn btn-sm btn-outline device-btn" id="btnMobile" onclick="setViewport('mobile')" title="Mobile View (375px)">
+        📲 Mobile
+      </button>
+      <button type="button" class="btn btn-sm btn-outline" style="color: #cbd5e1; border-color: transparent;" onclick="refreshPreview()" title="Refresh preview">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <!-- Right: Change Note & Save Actions -->
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <input type="text" id="changeNoteInput" placeholder="What did you change? (e.g. Updated hero banner text)" style="background: #334155; border: 1px solid #475569; color: #fff; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; width: 280px;">
+
+      <a href="{% url 'cms:version_history' page.id %}" class="btn btn-outline btn-sm" style="color: #cbd5e1; border-color: #475569;">
+        📜 History
+      </a>
+
+      <button type="button" class="btn btn-outline btn-sm" style="color: #fca5a5; border-color: #991b1b;" onclick="restoreOriginal()">
+        Restore Original
+      </button>
+
+      <button type="button" class="btn btn-primary btn-sm" style="background: #ff5200; font-weight: 700;" onclick="openPasswordConfirmModal()">
+        💾 Save Changes
+      </button>
+    </div>
+  </header>
+
+  <!-- Iframe Viewport Container -->
+  <div class="editor-viewport-container">
+    <iframe id="previewIframe" src="{{ page.route }}?cms_edit=1" class="editor-iframe desktop"></iframe>
+  </div>
+
+  <!-- Password Confirmation Modal for Secure Save -->
+  <div id="passwordModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 1rem;">
+    <div class="card" style="width: 100%; max-width: 420px; padding: 1.5rem; background: #fff;">
+      <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.5rem; color: #1e293b;">Confirm Admin Password</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Security policy requires admin authentication before publishing live changes to <strong>{{ page.route }}</strong>.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Admin Password</label>
+        <input type="password" id="adminPasswordInput" class="form-input" placeholder="••••••••" required>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="closePasswordModal()">Cancel</button>
+        <button type="button" id="confirmSaveBtn" class="btn btn-primary btn-sm" onclick="executeSaveChanges()">Verify & Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Image Replacements -->
+  <input type="file" id="mediaUploadInput" style="display: none;" accept="image/*,video/*" onchange="handleMediaUpload(this)">
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="{% static 'js/app.js' %}"></script>
+  <script>
+  const PAGE_ID = "{{ page.id }}";
+  let activeImageKey = null;
+
+  // Viewport Switcher
+  function setViewport(mode) {
+    const iframe = document.getElementById('previewIframe');
+    iframe.className = `editor-iframe ${mode}`;
+
+    document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+    if (mode === 'desktop') document.getElementById('btnDesktop').classList.add('active');
+    if (mode === 'tablet') document.getElementById('btnTablet').classList.add('active');
+    if (mode === 'mobile') document.getElementById('btnMobile').classList.add('active');
+  }
+
+  function refreshPreview() {
+    const iframe = document.getElementById('previewIframe');
+    iframe.contentWindow.location.reload();
+  }
+
+  function restoreOriginal() {
+    if (confirm("Discard unsaved visual changes and restore previous published version?")) {
+      refreshPreview();
+      showToast("Restored original published state.", "info");
+    }
+  }
+
+  // Trigger Image Upload from inside iframe
+  window.triggerImageUpload = function (key) {
+    activeImageKey = key;
+    document.getElementById('mediaUploadInput').click();
+  };
+
+  async function handleMediaUpload(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showToast("Uploading media asset...", "info");
+    const res = await fetch('/cms/api/upload-media/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF_TOKEN },
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast("Media replaced successfully!", "success");
+      // Update image inside iframe
+      const iframeDoc = document.getElementById('previewIframe').contentDocument;
+      const imgElem = iframeDoc.querySelector(`[data-cms-img="${activeImageKey}"]`);
+      if (imgElem) {
+        imgElem.src = data.url;
+      }
+    } else {
+      showToast(data.error || "Upload failed", "error");
+    }
+  }
+
+  // Password Confirmation Modal
+  function openPasswordConfirmModal() {
+    document.getElementById('passwordModal').style.display = 'flex';
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminPasswordInput').focus();
+  }
+
+  function closePasswordModal() {
+    document.getElementById('passwordModal').style.display = 'none';
+  }
+
+  // Collect modified blocks from iframe and save version
+  async function executeSaveChanges() {
+    const password = document.getElementById('adminPasswordInput').value;
+    if (!password) {
+      showToast("Please enter your admin password.", "warning");
+      return;
+    }
+
+    const note = document.getElementById('changeNoteInput').value.trim() || 'Visual inline edits';
+
+    // Scrape all elements with data-cms-key from iframe
+    const iframeDoc = document.getElementById('previewIframe').contentDocument;
+    const editableElements = iframeDoc.querySelectorAll('[data-cms-key]');
+    const blocks = {};
+
+    editableElements.forEach(el => {
+      const key = el.getAttribute('data-cms-key');
+      blocks[key] = el.innerHTML.trim();
+    });
+
+    // Also scrape replaced images
+    const imageElements = iframeDoc.querySelectorAll('[data-cms-img]');
+    imageElements.forEach(img => {
+      const key = img.getAttribute('data-cms-img');
+      blocks[key] = img.getAttribute('src');
+    });
+
+    const btn = document.getElementById('confirmSaveBtn');
+    btn.disabled = true;
+    btn.textContent = "Verifying...";
+
+    try {
+      const res = await fetch(`/cms/api/editor/${PAGE_ID}/save/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+          admin_password: password,
+          change_note: note,
+          blocks: blocks
+        })
+      });
+
+      const data = await res.json();
+      closePasswordModal();
+      btn.disabled = false;
+      btn.textContent = "Verify & Save";
+
+      if (res.ok) {
+        showToast(data.message, "success");
+        document.getElementById('versionBadge').textContent = `v${data.version_number}`;
+        document.getElementById('changeNoteInput').value = '';
+        refreshPreview();
+      } else {
+        showToast(data.error || "Failed to save changes.", "error");
+      }
+    } catch (err) {
+      closePasswordModal();
+      btn.disabled = false;
+      btn.textContent = "Verify & Save";
+      showToast("Network error while saving version.", "error");
+    }
+  }
+  </script>
+</body>
+</html>
+

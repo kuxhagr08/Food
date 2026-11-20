@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Account — QuickBite{% endblock %}
+
+{% block extra_css %}
+<style>
+.auth-page {
+  min-height: calc(100dvh - var(--header-height));
+  display: flex; align-items: center; justify-content: center;
+  padding: 2rem 1rem 4rem;
+  background: radial-gradient(ellipse at top, rgba(108,71,255,0.07) 0%, transparent 60%),
+              radial-gradient(ellipse at bottom-right, rgba(255,59,92,0.05) 0%, transparent 50%);
+}
+.auth-card { width: 100%; max-width: 480px; background: var(--bg-card); border-radius: var(--radius-xl); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); overflow: hidden; }
+.auth-card-header { background: var(--grad-purple); padding: 2rem 2rem 1.75rem; text-align: center; color: #fff; }
+.auth-card-body { padding: 2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card animate-scale-in">
+    <div class="auth-card-header">
+      <div style="font-size:2.5rem;margin-bottom:0.5rem;">🚀</div>
+      <h1 style="font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:0.3rem;">Join QuickBite</h1>
+      <p style="color:rgba(255,255,255,0.65);font-size:0.9rem;margin:0;">Create your free account today</p>
+    </div>
+    <div class="auth-card-body">
+
+      {% if form.errors %}
+        <div style="background:var(--danger-light);color:var(--danger);padding:0.85rem 1rem;border-radius:var(--radius-md);font-size:0.85rem;margin-bottom:1rem;border:1px solid rgba(255,59,92,0.2);">
+          {% for field, errors in form.errors.items %}
+            {% for error in errors %}<div>⚠️ {{ error }}</div>{% endfor %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{% url 'accounts:register' %}">
+        {% csrf_token %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            {{ form.first_name }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            {{ form.last_name }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          {{ form.email }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          {{ form.phone }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          {{ form.password }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          {{ form.confirm_password }}
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem;font-size:1rem;">
+          Create Account →
+        </button>
+      </form>
+
+      <div style="text-align:center;margin-top:1.5rem;font-size:0.9rem;color:var(--text-muted);">
+        Already have an account? <a href="{% url 'accounts:login' %}" style="color:var(--brand-1);font-weight:700;">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

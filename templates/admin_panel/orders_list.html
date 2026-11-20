@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Orders - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">All Customer Orders</h1>
+      <a href="{% url 'core:admin_dashboard' %}" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Admin Dashboard</a>
+    </div>
+    <a href="{% url 'core:admin_export_csv' %}" class="btn btn-outline btn-sm">📥 Export CSV</a>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+    <form method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+      <div style="flex: 1; min-width: 220px;">
+        <input type="text" name="q" value="{{ search_query }}" class="form-input" placeholder="Search by order #, email, or restaurant...">
+      </div>
+      <div style="min-width: 180px;">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          {% for key, val in status_choices %}
+            <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ val }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if search_query or status_filter %}
+        <a href="{% url 'core:admin_orders' %}" class="btn btn-outline btn-sm">Reset</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="card" style="padding: 1rem; overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">
+          <th style="padding: 0.75rem 0.5rem;">Order #</th>
+          <th style="padding: 0.75rem 0.5rem;">Placed At</th>
+          <th style="padding: 0.75rem 0.5rem;">Restaurant</th>
+          <th style="padding: 0.75rem 0.5rem;">Customer</th>
+          <th style="padding: 0.75rem 0.5rem;">Total (₹)</th>
+          <th style="padding: 0.75rem 0.5rem;">Status</th>
+          <th style="padding: 0.75rem 0.5rem;">Assigned Driver</th>
+          <th style="padding: 0.75rem 0.5rem; text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.75rem 0.5rem; font-weight: 700;">
+              <a href="{% url 'orders:live_tracking' o.id %}" style="color: var(--brand-1);">#{{ o.order_number }}</a>
+            </td>
+            <td style="padding: 0.75rem 0.5rem; color: var(--text-muted); font-size: 0.85rem;">{{ o.placed_at|date:"d M H:i" }}</td>
+            <td style="padding: 0.75rem 0.5rem;">{{ o.restaurant.name }}</td>
+            <td style="padding: 0.75rem 0.5rem;">
+              <div>{{ o.customer.email }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ o.customer.phone|default:'' }}</div>
+            </td>
+            <td style="padding: 0.75rem 0.5rem; font-weight: 700;">₹{{ o.total_amount|floatformat:2 }}</td>
+            <td style="padding: 0.75rem 0.5rem;">
+              <span class="role-pill" style="font-size: 0.75rem;">{{ o.get_status_display }}</span>
+            </td>
+            <td style="padding: 0.75rem 0.5rem;">
+              {% if o.delivery_partner %}
+                <span>🛵 {{ o.delivery_partner.get_full_name|default:o.delivery_partner.email }}</span>
+              {% else %}
+                <form method="POST" action="{% url 'core:admin_manual_assign' o.id %}" style="display: flex; gap: 0.25rem;">
+                  {% csrf_token %}
+                  <select name="partner_id" class="form-select" style="font-size: 0.75rem; padding: 2px 4px; min-height: 28px;" required>
+                    <option value="">Assign partner...</option>
+                    {% for dp in delivery_partners %}
+                      <option value="{{ dp.id }}">{{ dp.get_full_name|default:dp.email }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.75rem; min-height: 28px;">Assign</button>
+                </form>
+              {% endif %}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: right;">
+              <form method="POST" action="{% url 'core:admin_change_status' o.id %}" style="display: inline-flex;">
+                {% csrf_token %}
+                <select name="status" class="form-select" style="font-size: 0.75rem; padding: 2px 4px; min-height: 28px; width: auto;" onchange="this.form.submit()">
+                  <option value="">Status...</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="ready">Ready</option>
+                  <option value="picked_up">Picked Up</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Cart — QuickBite{% endblock %}
+
+{% block extra_css %}
+<style>
+.cart-item-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1rem 0; border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s;
+}
+.cart-item-row:last-child { border-bottom: none; }
+.cart-item-row:hover { background: var(--bg-subtle); border-radius: var(--radius-sm); padding-left: 0.5rem; padding-right: 0.5rem; }
+
+.bill-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; font-size: 0.93rem; }
+.bill-row.total {
+  border-top: 1.5px solid var(--border-color); margin-top: 0.75rem; padding-top: 0.9rem;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container page-section" style="max-width:960px;">
+
+  <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.75rem;">
+    <h1 style="font-family:var(--font-display);font-size:1.75rem;font-weight:800;">🛒 My Cart</h1>
+    {% if cart_items %}
+      <span class="badge badge-primary">{{ cart_items|length }} item{% if cart_items|length != 1 %}s{% endif %}</span>
+    {% endif %}
+  </div>
+
+  {% if cart_items %}
+    <div style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+
+      <!-- Restaurant Banner -->
+      {% if restaurant %}
+        <div style="background:linear-gradient(135deg,var(--brand-1-light),var(--brand-2-light));border-radius:var(--radius-lg);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border:1px solid rgba(255,59,92,0.15);flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:0.85rem;">
+            <span style="font-size:1.75rem;">🏬</span>
+            <div>
+              <div style="font-family:var(--font-display);font-weight:700;font-size:1rem;">{{ restaurant.name }}</div>
+              <div style="font-size:0.82rem;color:var(--text-muted);">{{ restaurant.address|truncatechars:60 }}</div>
+            </div>
+          </div>
+          <a href="{% url 'restaurants:detail' restaurant.slug %}" class="btn btn-outline btn-sm">+ Add More</a>
+        </div>
+      {% endif %}
+
+      <!-- Cart Items -->
+      <div class="card" style="padding:1.25rem;">
+        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Cart Items</h3>
+        <div>
+          {% for item in cart_items %}
+            <div class="cart-item-row">
+              <div style="display:flex;align-items:center;gap:0.85rem;min-width:0;">
+                <span class="food-type-icon {% if item.menu_item.is_veg %}veg{% else %}non-veg{% endif %}"></span>
+                <div style="min-width:0;">
+                  <div style="font-weight:600;font-size:0.95rem;overflow-wrap:anywhere;">{{ item.menu_item.name }}</div>
+                  <div style="font-size:0.82rem;color:var(--text-muted);">₹{{ item.unit_price|floatformat:0 }} each</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:1rem;flex-shrink:0;">
+                <div class="qty-stepper">
+                  <button class="qty-btn" onclick="updateCartItem('{{ item.menu_item.id }}','decrease')">−</button>
+                  <span class="qty-value">{{ item.quantity }}</span>
+                  <button class="qty-btn" onclick="updateCartItem('{{ item.menu_item.id }}','increase')">+</button>
+                </div>
+                <div style="font-family:var(--font-display);font-weight:800;font-size:1rem;min-width:55px;text-align:right;">₹{{ item.subtotal|floatformat:0 }}</div>
+                <button onclick="updateCartItem('{{ item.menu_item.id }}','remove')"
+                        style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:1.1rem;padding:4px;border-radius:4px;transition:color 0.15s;"
+                        title="Remove"
+                        onmouseover="this.style.color='var(--danger)'"
+                        onmouseout="this.style.color='var(--text-light)'">🗑️</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Bottom: Coupon + Bill -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;">
+
+        <!-- Coupon -->
+        <div class="card" style="padding:1.25rem;">
+          <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:1rem;">🏷️ Have a Coupon?</h3>
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+            <input type="text" id="couponCodeInput" class="form-input"
+                   placeholder="e.g. WELCOME50"
+                   value="{{ cart.applied_coupon.code|default:'' }}"
+                   style="text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">
+            <button class="btn btn-primary btn-sm" onclick="applyCouponCode()" style="flex-shrink:0;">Apply</button>
+          </div>
+          {% if cart.applied_coupon %}
+            <div style="background:var(--success-light);color:var(--success);padding:0.6rem 0.9rem;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;">
+              <span>✓ "{{ cart.applied_coupon.code }}" applied!</span>
+              <button onclick="removeCouponCode()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-weight:700;font-size:0.85rem;">Remove</button>
+            </div>
+          {% else %}
+            <div style="font-size:0.8rem;color:var(--text-muted);">
+              Try: <strong>WELCOME50</strong> (50% off) or <strong>FREEDEL</strong> (Free delivery)
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Bill Summary -->
+        <div class="card" style="padding:1.25rem;">
+          <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:1rem;">📋 Bill Summary</h3>
+          <div>
+            <div class="bill-row"><span style="color:var(--text-muted);">Item Total</span><span>₹{{ pricing.subtotal|floatformat:2 }}</span></div>
+            <div class="bill-row"><span style="color:var(--text-muted);">Delivery Fee</span><span>₹{{ pricing.delivery_fee|floatformat:2 }}</span></div>
+            <div class="bill-row"><span style="color:var(--text-muted);">GST (5%)</span><span>₹{{ pricing.tax_amount|floatformat:2 }}</span></div>
+            {% if pricing.discount_amount > 0 %}
+              <div class="bill-row" style="color:var(--success);font-weight:700;">
+                <span>🎉 Discount</span><span>− ₹{{ pricing.discount_amount|floatformat:2 }}</span>
+              </div>
+            {% endif %}
+            <div class="bill-row total">
+              <span>Total to Pay</span>
+              <span style="color:var(--brand-1);">₹{{ pricing.total_amount|floatformat:2 }}</span>
+            </div>
+          </div>
+          <a href="{% url 'orders:checkout' %}" class="btn btn-primary" style="width:100%;margin-top:1.25rem;font-size:1rem;">
+            Proceed to Checkout →
+          </a>
+        </div>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="empty-state" style="background:var(--bg-card);border-radius:var(--radius-xl);border:1px solid var(--border-color);">
+      <span class="empty-icon">🛒</span>
+      <h3>Your cart is empty</h3>
+      <p>Great food is just a few clicks away. Explore our curated kitchens!</p>
+      <a href="{% url 'restaurants:list' %}" class="btn btn-primary" style="margin-top:1.25rem;">Browse Restaurants →</a>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+async function applyCouponCode() {
+  const code = document.getElementById('couponCodeInput').value.trim();
+  if (!code) { showToast('Please enter a coupon code.', 'warning'); return; }
+  const res = await fetch('/orders/api/cart/apply-coupon/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+    body: JSON.stringify({ code })
+  });
+  const data = await res.json();
+  if (res.ok) { showToast(data.message, 'success'); window.location.reload(); }
+  else { showToast(data.error || 'Failed to apply coupon', 'error'); }
+}
+
+async function removeCouponCode() {
+  const res = await fetch('/orders/api/cart/apply-coupon/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+    body: JSON.stringify({ code: '' })
+  });
+  if (res.ok) { showToast('Coupon removed', 'info'); window.location.reload(); }
+}
+</script>
+{% endblock %}

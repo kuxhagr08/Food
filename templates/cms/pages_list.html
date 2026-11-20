@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Website Pages - Visual CMS Editor{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">Website Pages & Visual Editor</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 2px;">Manage live site content, text blocks, banners, and preview inline with version control.</p>
+    </div>
+    <a href="{% url 'core:admin_dashboard' %}" class="btn btn-outline btn-sm">&larr; Admin Dashboard</a>
+  </div>
+
+  <!-- Search Filter -->
+  <div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+    <form method="GET" style="display: flex; gap: 0.75rem;">
+      <input type="text" name="q" value="{{ search_query }}" class="form-input" placeholder="Search pages by title or route (e.g., '/', '/about/')...">
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      {% if search_query %}
+        <a href="{% url 'cms:pages_list' %}" class="btn btn-outline btn-sm">Reset</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Pages Table -->
+  <div class="card" style="padding: 1rem; overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+      <thead>
+        <tr style="text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">
+          <th style="padding: 0.75rem 0.5rem;">Page Title</th>
+          <th style="padding: 0.75rem 0.5rem;">Route</th>
+          <th style="padding: 0.75rem 0.5rem;">Version</th>
+          <th style="padding: 0.75rem 0.5rem;">Last Updated</th>
+          <th style="padding: 0.75rem 0.5rem;">Updated By</th>
+          <th style="padding: 0.75rem 0.5rem; text-align: right;">Visual Editor Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for page in pages %}
+          <tr style="border-bottom: 1px solid var(--border-color);">
+            <td style="padding: 0.75rem 0.5rem; font-weight: 700; color: var(--secondary);">
+              {{ page.title }}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; font-family: monospace; color: var(--brand-1);">
+              {{ page.route }}
+            </td>
+            <td style="padding: 0.75rem 0.5rem;">
+              <span class="role-pill" style="font-size: 0.75rem; background: var(--primary-light); color: var(--brand-1);">
+                v{{ page.current_version }}
+              </span>
+            </td>
+            <td style="padding: 0.75rem 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+              {{ page.updated_at|date:"d M Y, h:i A" }}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; color: var(--text-muted);">
+              {{ page.updated_by.get_full_name|default:page.updated_by.email|default:'System' }}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: right;">
+              <div style="display: inline-flex; gap: 0.5rem;">
+                <a href="{% url 'cms:visual_editor' page.id %}" class="btn btn-primary btn-sm">
+                  🎨 Open Visual Editor
+                </a>
+                <a href="{% url 'cms:version_history' page.id %}" class="btn btn-outline btn-sm">
+                  📜 Change History
+                </a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

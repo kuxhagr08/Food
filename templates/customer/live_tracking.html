@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Live Tracking: Order #{{ order.order_number }} - QuickBite{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 4rem; max-width: 1050px;">
+  <!-- Header Bar -->
+  <div class="card" style="padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <h1 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0;">Order #{{ order.order_number }}</h1>
+        <span id="statusBadge" class="role-pill" style="background: var(--primary-light); color: var(--brand-1); font-size: 0.85rem;">
+          {{ order.get_status_display }}
+        </span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem; margin-bottom: 0;">
+        From <strong>{{ order.restaurant.name }}</strong> &nbsp;•&nbsp; Placed at {{ order.placed_at|date:"h:i A" }}
+      </p>
+    </div>
+
+    <!-- Live ETA / Status Highlights -->
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div style="text-align: right;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Estimated Arrival</div>
+        <div id="etaDisplay" style="font-size: 1.25rem; font-weight: 800; color: var(--brand-1);">
+          {% if order.status == 'delivered' %}Delivered{% else %}~{{ order.estimated_prep_mins }} mins{% endif %}
+        </div>
+      </div>
+      {% if order.status == 'placed' %}
+        <button type="button" id="cancelOrderBtn" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);" onclick="cancelCurrentOrder()">Cancel Order</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Delivery Verification OTP Banner (For security upon driver arrival) -->
+  {% if order.status != 'delivered' and order.status != 'cancelled' %}
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="font-size: 1.5rem;">🔐</span>
+        <div>
+          <div style="font-weight: 700; font-size: 0.95rem; color: #1e40af;">Share Delivery OTP with Driver</div>
+          <div style="font-size: 0.8rem; color: #3b82f6;">Only share this code when you receive your food package at the door.</div>
+        </div>
+      </div>
+      <div style="background: #ffffff; border: 2px dashed #3b82f6; padding: 4px 16px; border-radius: var(--radius-sm); font-size: 1.35rem; font-weight: 900; letter-spacing: 4px; color: #1e40af;">
+        {{ order.delivery_otp }}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Timeline Status Tracker (Swiggy / Zomato style) -->
+  <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; position: relative; overflow-x: auto; padding-bottom: 0.5rem;" id="timelineContainer">
+      {% for step in status_steps %}
+        <div class="timeline-step" data-step-key="{{ step.key }}" style="display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 90px; flex: 1; position: relative;">
+          <!-- Node Dot -->
+          <div class="timeline-dot" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; z-index: 2; transition: all 0.3s;
+            {% if forloop.counter0 < current_step_idx %}
+              background: var(--success); color: #fff;
+            {% elif forloop.counter0 == current_step_idx %}
+              background: var(--brand-1); color: #fff; box-shadow: 0 0 0 5px rgba(255, 82, 0, 0.2);
+            {% else %}
+              background: #e5e7eb; color: #9ca3af;
+            {% endif %}">
+            {% if forloop.counter0 < current_step_idx %}✓{% else %}{{ forloop.counter }}{% endif %}
+          </div>
+          <!-- Label -->
+          <div style="font-size: 0.75rem; font-weight: 700; margin-top: 0.5rem; color: {% if forloop.counter0 <= current_step_idx %}var(--text-main){% else %}var(--text-light){% endif %};">
+            {{ step.label }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Main Map & Driver Grid -->
+  <div style="display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: flex-start;">
+    <!-- Live Map View -->
+    <div class="card" style="padding: 0; overflow: hidden; height: 420px; position: relative;">
+      <div id="liveOrderMap" style="width: 100%; height: 100%;"></div>
+      <div style="position: absolute; bottom: 12px; left: 12px; background: rgba(255,255,255,0.9); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; box-shadow: var(--shadow-sm); z-index: 500;">
+        🟢 Live WebSocket GPS Feed Active
+      </div>
+    </div>
+
+    <!-- Order Items & Driver Card -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <!-- Driver Partner Contact Card -->
+      <div class="card" style="padding: 1.25rem;">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; color: var(--text-muted);">Delivery Partner</h3>
+        <div id="partnerCardContent">
+          {% if order.delivery_partner %}
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800;">
+                🛵
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 1rem;">{{ order.delivery_partner.get_full_name|default:order.delivery_partner.email }}</div>
+                <div style="color: var(--text-muted); font-size: 0.85rem;">Vaccinated & Verified Partner</div>
+                {% if order.delivery_partner.phone %}
+                  <a href="tel:{{ order.delivery_partner.phone }}" class="btn btn-outline btn-sm" style="margin-top: 0.5rem; display: inline-flex;">
+                    📞 Call {{ order.delivery_partner.phone }}
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <div style="color: var(--text-muted); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+              <span>⏳</span>
+              <span>Assigning nearest delivery partner once food is ready...</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Order Items Summary -->
+      <div class="card" style="padding: 1.25rem;">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase; color: var(--text-muted);">Ordered Items</h3>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+          {% for item in order_items %}
+            <div style="display: flex; justify-content: space-between;">
+              <span>{{ item.quantity }}x {{ item.item_name }}</span>
+              <span style="font-weight: 600;">₹{{ item.subtotal|floatformat:0 }}</span>
+            </div>
+          {% endfor %}
+          <div style="border-top: 1px solid var(--border-color); margin-top: 0.5rem; padding-top: 0.5rem; display: flex; justify-content: space-between; font-weight: 800;">
+            <span>Total Paid ({{ order.payment_method }})</span>
+            <span style="color: var(--brand-1);">₹{{ order.total_amount|floatformat:2 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review Box (Appears when delivered) -->
+      {% if order.status == 'delivered' and not order.review %}
+        <div class="card" style="padding: 1.25rem; background: #fffbeb; border-color: #fde68a;">
+          <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; color: #92400e;">How was your food?</h3>
+          <p style="font-size: 0.85rem; color: #b45309; margin-bottom: 0.75rem;">Rate your meal from {{ order.restaurant.name }}</p>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;" id="starRating">
+            <button type="button" class="btn btn-sm btn-outline star-btn" onclick="selectStar(1)">⭐ 1</button>
+            <button type="button" class="btn btn-sm btn-outline star-btn" onclick="selectStar(2)">⭐ 2</button>
+            <button type="button" class="btn btn-sm btn-outline star-btn" onclick="selectStar(3)">⭐ 3</button>
+            <button type="button" class="btn btn-sm btn-outline star-btn" onclick="selectStar(4)">⭐ 4</button>
+            <button type="button" class="btn btn-sm btn-outline star-btn" onclick="selectStar(5)" style="background:var(--brand-1);color:#fff;">⭐ 5</button>
+          </div>
+          <input type="text" id="reviewComment" class="form-input" placeholder="Write feedback..." style="margin-bottom: 0.5rem;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="submitReview()">Submit Rating</button>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+const ORDER_ID = "{{ order.id }}";
+const RESTAURANT_LAT = {{ order.restaurant.latitude }};
+const RESTAURANT_LNG = {{ order.restaurant.longitude }};
+const DELIVERY_LAT = {{ order.delivery_lat }};
+const DELIVERY_LNG = {{ order.delivery_lng }};
+let partnerLat = {% if order.delivery_partner and order.delivery_partner.current_lat %}{{ order.delivery_partner.current_lat }}{% else %}null{% endif %};
+let partnerLng = {% if order.delivery_partner and order.delivery_partner.current_lng %}{{ order.delivery_partner.current_lng }}{% else %}null{% endif %};
+
+let map, restMarker, dropMarker, driverMarker, routeLine;
+
+function initTrackingMap() {
+  map = L.map('liveOrderMap').setView([RESTAURANT_LAT, RESTAURANT_LNG], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // Restaurant Marker
+  const restIcon = L.divIcon({
+    html: '<div style="font-size:24px;background:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🏬</div>',
+    className: 'rest-marker',
+    iconSize: [34, 34]
+  });
+  restMarker = L.marker([RESTAURANT_LAT, RESTAURANT_LNG], { icon: restIcon }).addTo(map).bindPopup("<b>{{ order.restaurant.name }}</b><br>Pickup Kitchen");
+
+  // Customer Drop Marker
+  const dropIcon = L.divIcon({
+    html: '<div style="font-size:24px;background:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);">📍</div>',
+    className: 'drop-marker',
+    iconSize: [34, 34]
+  });
+  dropMarker = L.marker([DELIVERY_LAT, DELIVERY_LNG], { icon: dropIcon }).addTo(map).bindPopup("<b>Delivery Destination</b>");
+
+  // Driver Marker (if present)
+  updateDriverPosition(partnerLat, partnerLng);
+
+  // Fit Bounds
+  const group = L.featureGroup([restMarker, dropMarker]);
+  map.fitBounds(group.getBounds().pad(0.2));
+}
+
+function updateDriverPosition(lat, lng) {
+  if (!lat || !lng) return;
+  const driverIcon = L.divIcon({
+    html: '<div style="font-size:24px;background:#ff5200;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px rgba(255,82,0,0.3);color:#fff;">🛵</div>',
+    className: 'driver-marker',
+    iconSize: [38, 38]
+  });
+
+  if (driverMarker) {
+    driverMarker.setLatLng([lat, lng]);
+  } else {
+    driverMarker = L.marker([lat, lng], { icon: driverIcon }).addTo(map).bindPopup("<b>Delivery Partner</b>");
+  }
+
+  // Draw or update route lines
+  if (routeLine) {
+    routeLine.setLatLngs([[lat, lng], [DELIVERY_LAT, DELIVERY_LNG]]);
+  } else {
+    routeLine = L.polyline([[lat, lng], [DELIVERY_LAT, DELIVERY_LNG]], {
+      color: '#ff5200',
+      weight: 4,
+      dashArray: '8, 8'
+    }).addTo(map);
+  }
+}
+
+// WebSocket Live Tracking
+let trackingSocket = null;
+function connectTrackingSocket() {
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${window.location.host}/ws/orders/${ORDER_ID}/`;
+  trackingSocket = new WebSocket(wsUrl);
+
+  trackingSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+    if (data.type === 'order_status_update') {
+      handleStatusChange(data);
+    } else if (data.type === 'driver_location_update') {
+      updateDriverPosition(data.partner_lat, data.partner_lng);
+    }
+  };
+
+  trackingSocket.onclose = function () {
+    setTimeout(connectTrackingSocket, 3000); // Auto-reconnect
+  };
+}
+
+function handleStatusChange(data) {
+  showToast(`Order status updated to: ${data.status_display}`, "info");
+  const badge = document.getElementById('statusBadge');
+  if (badge) badge.textContent = data.status_display;
+
+  if (data.to_status === 'delivered') {
+    window.location.reload();
+  }
+
+  // Reload page to reflect timeline transitions smoothly
+  setTimeout(() => window.location.reload(), 1200);
+}
+
+async function cancelCurrentOrder() {
+  if (!confirm("Are you sure you want to cancel this order?")) return;
+  const res = await fetch(`/orders/api/${ORDER_ID}/cancel/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ reason: 'Customer requested cancellation' })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showToast(data.message, "info");
+    window.location.reload();
+  } else {
+    showToast(data.error || "Cannot cancel order", "error");
+  }
+}
+
+let selectedRating = 5;
+function selectStar(val) {
+  selectedRating = val;
+  document.querySelectorAll('.star-btn').forEach((b, i) => {
+    b.style.background = (i + 1) === val ? 'var(--brand-1)' : 'transparent';
+    b.style.color = (i + 1) === val ? '#fff' : 'inherit';
+  });
+}
+
+async function submitReview() {
+  const comment = document.getElementById('reviewComment').value.trim();
+  const res = await fetch(`/orders/api/${ORDER_ID}/review/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ rating: selectedRating, comment })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showToast(data.message, "success");
+    window.location.reload();
+  } else {
+    showToast(data.error || "Failed to submit review", "error");
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initTrackingMap();
+  connectTrackingSocket();
+});
+</script>
+{% endblock %}
+

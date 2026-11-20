@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sales Reports & Analytics - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">Sales Performance & Reports</h1>
+      <a href="{% url 'core:admin_dashboard' %}" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Admin Dashboard</a>
+    </div>
+    <a href="{% url 'core:admin_export_csv' %}" class="btn btn-primary">
+      📥 Export Orders Report (.CSV)
+    </a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Sales by Restaurant -->
+    <div class="card" style="padding: 1.5rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem;">Revenue by Restaurant</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+          <tr style="text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">
+            <th style="padding: 0.5rem 0;">Restaurant</th>
+            <th style="padding: 0.5rem 0; text-align: center;">Orders</th>
+            <th style="padding: 0.5rem 0; text-align: right;">Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in restaurant_sales %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.65rem 0; font-weight: 600;">{{ r.name }}</td>
+              <td style="padding: 0.65rem 0; text-align: center;">{{ r.total_orders }}</td>
+              <td style="padding: 0.65rem 0; text-align: right; font-weight: 700; color: var(--brand-1);">₹{{ r.total_revenue|default:0|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Top Selling Dishes -->
+    <div class="card" style="padding: 1.5rem;">
+      <h3 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1rem;">Top Selling Items</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+          <tr style="text-align: left; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">
+            <th style="padding: 0.5rem 0;">Dish Name</th>
+            <th style="padding: 0.5rem 0; text-align: center;">Qty Sold</th>
+            <th style="padding: 0.5rem 0; text-align: right;">Total (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in top_items %}
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.65rem 0; font-weight: 600;">{{ item.item_name }}</td>
+              <td style="padding: 0.65rem 0; text-align: center;">{{ item.total_sold }}</td>
+              <td style="padding: 0.65rem 0; text-align: right; font-weight: 700;">₹{{ item.total_revenue|floatformat:2 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

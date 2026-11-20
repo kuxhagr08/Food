@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kitchen Display System (KDS) - {{ restaurant.name }}{% endblock %}
+
+{% block content %}
+<div class="kds-container">
+  <!-- KDS Top Navigation & Controls -->
+  <div class="kds-header">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <h1 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <span>🍳 KDS:</span>
+        <span style="color: var(--brand-1);">{{ restaurant.name }}</span>
+      </h1>
+
+      <!-- Restaurant Selector (for admins) -->
+      {% if is_admin and all_restaurants %}
+        <select class="form-select" style="background:#333; color:#fff; border-color:#444; width:auto; padding: 2px 8px; min-height:34px; font-size:0.85rem;" onchange="window.location.href='?restaurant_id=' + this.value">
+          {% for r in all_restaurants %}
+            <option value="{{ r.id }}" {% if r.id == restaurant.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </div>
+
+    <!-- Audio & Action Controls -->
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <!-- Audio Enable / Mute Controls -->
+      <button type="button" id="audioToggleBtn" class="btn btn-outline btn-sm" style="color: #fbbf24; border-color: #fbbf24;" onclick="unlockOrToggleAudio()">
+        🔊 Sound Alert: <span id="audioStatusText">Click to Enable</span>
+      </button>
+
+      <!-- Manage Stock Toggle Modal -->
+      <button type="button" class="btn btn-outline btn-sm" style="color:#fff; border-color:#555;" onclick="openStockModal()">
+        📦 Item Stock
+      </button>
+
+      <span id="wsStatusBadge" style="background: #065f46; color: #34d399; padding: 3px 8px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 700;">
+        WS: Connected
+      </span>
+    </div>
+  </div>
+
+  <!-- 3-Column Layout: New | Preparing | Ready -->
+  <div class="kds-columns">
+    <!-- 1. NEW ORDERS COLUMN -->
+    <div class="kds-column">
+      <div class="kds-col-header new">
+        <span>🔔 New Orders</span>
+        <span id="countNew" class="role-pill" style="background:#fff; color:#1e40af; font-size:0.8rem;">0</span>
+      </div>
+      <div id="colNew" class="kds-card-list">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- 2. PREPARING COLUMN -->
+    <div class="kds-column">
+      <div class="kds-col-header prep">
+        <span>🔥 Preparing</span>
+        <span id="countPrep" class="role-pill" style="background:#000; color:#fff; font-size:0.8rem;">0</span>
+      </div>
+      <div id="colPrep" class="kds-card-list">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- 3. READY COLUMN -->
+    <div class="kds-column">
+      <div class="kds-col-header ready">
+        <span>✅ Ready for Pickup</span>
+        <span id="countReady" class="role-pill" style="background:#fff; color:#065f46; font-size:0.8rem;">0</span>
+      </div>
+      <div id="colReady" class="kds-card-list">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Accept Order with Prep Time -->
+<div id="acceptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="width:100%; max-width:400px; padding:1.5rem; background:#262626; color:#fff;">
+    <h3 style="font-size:1.2rem; font-weight:700; margin-bottom:0.75rem; color:#fff;">Accept Order</h3>
+    <p style="font-size:0.9rem; color:#aaa; margin-bottom:1rem;">Select estimated preparation time:</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.5rem;">
+      <button type="button" class="btn btn-outline" style="color:#fff; border-color:#555;" onclick="confirmAccept(10)">⏱️ 10 Mins</button>
+      <button type="button" class="btn btn-outline" style="color:#fff; border-color:#555;" onclick="confirmAccept(15)">⏱️ 15 Mins</button>
+      <button type="button" class="btn btn-outline" style="color:#fff; border-color:#555;" onclick="confirmAccept(20)">⏱️ 20 Mins</button>
+      <button type="button" class="btn btn-outline" style="color:#fff; border-color:#555;" onclick="confirmAccept(30)">⏱️ 30 Mins</button>
+    </div>
+    <div style="text-align:right;">
+      <button type="button" class="btn btn-outline btn-sm" style="color:#ccc;" onclick="closeAcceptModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Reject Order with Reason -->
+<div id="rejectModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="width:100%; max-width:420px; padding:1.5rem; background:#262626; color:#fff;">
+    <h3 style="font-size:1.2rem; font-weight:700; margin-bottom:0.75rem; color:#ef4444;">Reject Order</h3>
+    <p style="font-size:0.85rem; color:#aaa; margin-bottom:1rem;">Specify the rejection reason:</p>
+    <div class="form-group">
+      <input type="text" id="rejectReasonInput" class="form-input" placeholder="e.g. Items sold out / Kitchen overload" style="background:#333; color:#fff; border-color:#555;">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+      <button type="button" class="btn btn-outline btn-sm" style="color:#ccc;" onclick="closeRejectModal()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject()">Confirm Rejection</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Menu Item Stock Availability Toggle -->
+<div id="stockModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="card" style="width:100%; max-width:550px; max-height:85vh; display:flex; flex-direction:column; padding:1.5rem; background:#262626; color:#fff;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <h3 style="font-size:1.2rem; font-weight:700; margin:0; color:#fff;">Item Availability & Stock</h3>
+      <button type="button" style="background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;" onclick="closeStockModal()">×</button>
+    </div>
+    <div id="stockItemList" style="overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:0.75rem;">
+      <!-- Populated dynamically via JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+const RESTAURANT_ID = "{{ restaurant.id }}";
+let activeOrderIdForAction = null;
+let audioUnlocked = false;
+
+function unlockOrToggleAudio() {
+  window.kitchenAudio.init();
+  audioUnlocked = true;
+  const isMuted = window.kitchenAudio.toggleMute();
+  const textElem = document.getElementById('audioStatusText');
+  const btn = document.getElementById('audioToggleBtn');
+  if (isMuted) {
+    textElem.textContent = "Muted 🔇";
+    btn.style.color = "#9ca3af";
+    btn.style.borderColor = "#4b5563";
+  } else {
+    textElem.textContent = "Active 🔊";
+    btn.style.color = "#10b981";
+    btn.style.borderColor = "#10b981";
+    window.kitchenAudio.playChime();
+  }
+}
+
+// Fetch KDS Order data
+async function fetchKdsOrders() {
+  try {
+    const res = await fetch(`/kitchen/api/orders/?restaurant_id=${RESTAURANT_ID}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderKdsScreen(data);
+  } catch (err) {
+    console.error("KDS polling error", err);
+  }
+}
+
+function renderKdsScreen(data) {
+  const colNew = document.getElementById('colNew');
+  const colPrep = document.getElementById('colPrep');
+  const colReady = document.getElementById('colReady');
+
+  document.getElementById('countNew').textContent = data.new_orders.length;
+  document.getElementById('countPrep').textContent = data.preparing_orders.length;
+  document.getElementById('countReady').textContent = data.ready_orders.length;
+
+  // Audio siren triggers if new orders exist
+  if (data.new_orders.length > 0) {
+    if (!window.kitchenAudio.isMuted) {
+      window.kitchenAudio.startLoop(2500);
+    }
+  } else {
+    window.kitchenAudio.stopLoop();
+  }
+
+  // Render New Column
+  colNew.innerHTML = data.new_orders.length ? data.new_orders.map(o => createNewOrderCard(o)).join('') : '<div style="color:#777; text-align:center; padding:2rem;">No pending new orders</div>';
+
+  // Render Preparing Column
+  colPrep.innerHTML = data.preparing_orders.length ? data.preparing_orders.map(o => createPrepOrderCard(o)).join('') : '<div style="color:#777; text-align:center; padding:2rem;">No orders currently cooking</div>';
+
+  // Render Ready Column
+  colReady.innerHTML = data.ready_orders.length ? data.ready_orders.map(o => createReadyOrderCard(o)).join('') : '<div style="color:#777; text-align:center; padding:2rem;">No orders waiting for pickup</div>';
+
+  // Save menu items for stock toggle modal
+  window.kdsMenuItems = data.menu_items || [];
+}
+
+function createNewOrderCard(o) {
+  const itemsHtml = o.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600;"><span>${i.quantity}x ${i.name}</span></div>`).join('');
+  return `
+    <div class="kds-order-card flashing-new" id="card-${o.id}">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+        <div>
+          <div style="font-weight:900; font-size:1.15rem; color:#fff; display:flex; align-items:center; gap:0.5rem;">
+            <span>#${o.order_number}</span>
+            ${o.order_type === 'DINE_IN' ? `<span style="background:#f97316; color:#fff; font-weight:900; font-size:0.75rem; padding:2px 8px; border-radius:4px;">🍽️ TABLE #${o.table_number || '1'}</span>` : ''}
+          </div>
+          <div style="font-size:0.75rem; color:#cbd5e1;">Received at ${o.placed_at} (${o.mins_elapsed}m ago)</div>
+        </div>
+        <span style="background:#ef4444; color:#fff; font-weight:800; font-size:0.7rem; padding:2px 8px; border-radius:4px; animation:pulseDelay 1s infinite;">NEW</span>
+      </div>
+      <div style="background:#1e293b; padding:0.6rem; border-radius:6px; margin:0.5rem 0;">
+        ${itemsHtml}
+        ${o.special_instructions ? `<div style="font-size:0.8rem; color:#fbbf24; margin-top:4px;">⚠️ ${o.special_instructions}</div>` : ''}
+      </div>
+      <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+        <button type="button" class="btn btn-success btn-sm" style="flex:1;" onclick="openAcceptModal('${o.id}')">✓ Accept</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="openRejectModal('${o.id}')">✕ Reject</button>
+      </div>
+    </div>
+  `;
+}
+
+function createPrepOrderCard(o) {
+  const itemsHtml = o.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:0.95rem; font-weight:600;"><span>${i.quantity}x ${i.name}</span></div>`).join('');
+  const delayedClass = o.is_delayed ? 'delayed' : '';
+  return `
+    <div class="kds-order-card ${delayedClass}" style="border-left-color: #f59e0b;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+        <div>
+          <div style="font-weight:900; font-size:1.15rem; color:#fff; display:flex; align-items:center; gap:0.5rem;">
+            <span>#${o.order_number}</span>
+            ${o.order_type === 'DINE_IN' ? `<span style="background:#f97316; color:#fff; font-weight:900; font-size:0.75rem; padding:2px 8px; border-radius:4px;">🍽️ TABLE #${o.table_number || '1'}</span>` : ''}
+          </div>
+          <div style="font-size:0.75rem; color:#cbd5e1;">${o.order_type === 'DINE_IN' ? 'Table Service' : `Pickup Code: <strong>${o.pickup_otp}</strong>`}</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="background:#f59e0b; color:#000; font-weight:800; font-size:0.75rem; padding:2px 6px; border-radius:4px;">${o.mins_elapsed} mins</span>
+        </div>
+      </div>
+      <div style="background:#1e293b; padding:0.6rem; border-radius:6px; margin:0.5rem 0;">
+        ${itemsHtml}
+        ${o.special_instructions ? `<div style="font-size:0.8rem; color:#fbbf24; margin-top:4px;">⚠️ ${o.special_instructions}</div>` : ''}
+      </div>
+      <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+        ${o.status === 'accepted' ? `<button type="button" class="btn btn-outline btn-sm" style="flex:1; color:#f59e0b; border-color:#f59e0b;" onclick="markPreparing('${o.id}')">Start Cooking</button>` : ''}
+        <button type="button" class="btn btn-success btn-sm" style="flex:1;" onclick="markReady('${o.id}')">Mark Ready ✓</button>
+      </div>
+    </div>
+  `;
+}
+
+function createReadyOrderCard(o) {
+  const itemsHtml = o.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:0.95rem;"><span>${i.quantity}x ${i.name}</span></div>`).join('');
+  return `
+    <div class="kds-order-card" style="border-left-color: #10b981;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+        <div>
+          <div style="font-weight:900; font-size:1.15rem; color:#fff;">#${o.order_number}</div>
+          <div style="font-size:0.85rem; color:#34d399; font-weight:700;">Pickup OTP: ${o.pickup_otp}</div>
+        </div>
+        <span style="background:#065f46; color:#34d399; font-weight:700; font-size:0.75rem; padding:2px 8px; border-radius:4px;">Awaiting Driver</span>
+      </div>
+      <div style="background:#1e293b; padding:0.6rem; border-radius:6px; margin:0.5rem 0;">
+        ${itemsHtml}
+      </div>
+    </div>
+  `;
+}
+
+// Action Handlers
+function openAcceptModal(orderId) {
+  activeOrderIdForAction = orderId;
+  document.getElementById('acceptModal').style.display = 'flex';
+}
+function closeAcceptModal() {
+  document.getElementById('acceptModal').style.display = 'none';
+}
+async function confirmAccept(prepTime) {
+  closeAcceptModal();
+  const res = await fetch(`/kitchen/api/orders/${activeOrderIdForAction}/accept/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ prep_time: prepTime })
+  });
+  if (res.ok) {
+    showToast(`Order accepted (${prepTime}m prep time)`, "success");
+    fetchKdsOrders();
+  }
+}
+
+function openRejectModal(orderId) {
+  activeOrderIdForAction = orderId;
+  document.getElementById('rejectModal').style.display = 'flex';
+}
+function closeRejectModal() {
+  document.getElementById('rejectModal').style.display = 'none';
+}
+async function confirmReject() {
+  const reason = document.getElementById('rejectReasonInput').value.trim() || 'Kitchen busy';
+  closeRejectModal();
+  const res = await fetch(`/kitchen/api/orders/${activeOrderIdForAction}/reject/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ reason })
+  });
+  if (res.ok) {
+    showToast("Order rejected", "warning");
+    fetchKdsOrders();
+  }
+}
+
+async function markPreparing(orderId) {
+  const res = await fetch(`/kitchen/api/orders/${orderId}/preparing/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN }
+  });
+  if (res.ok) {
+    showToast("Marked as Preparing", "info");
+    fetchKdsOrders();
+  }
+}
+
+async function markReady(orderId) {
+  const res = await fetch(`/kitchen/api/orders/${orderId}/ready/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN }
+  });
+  if (res.ok) {
+    showToast("Order is Ready for Pickup! Nearby drivers notified.", "success");
+    fetchKdsOrders();
+  }
+}
+
+// Stock Modal
+function openStockModal() {
+  const modal = document.getElementById('stockModal');
+  const list = document.getElementById('stockItemList');
+  const items = window.kdsMenuItems || [];
+
+  list.innerHTML = items.map(item => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#333; padding:0.6rem 0.85rem; border-radius:6px;">
+      <div>
+        <div style="font-weight:700; font-size:0.95rem;">${item.name}</div>
+        <div style="font-size:0.8rem; color:#aaa;">₹${parseFloat(item.price).toFixed(0)}</div>
+      </div>
+      <button type="button" class="btn btn-sm ${item.is_available ? 'btn-success' : 'btn-danger'}" onclick="toggleItemStock('${item.id}')">
+        ${item.is_available ? 'In Stock' : 'Out of Stock'}
+      </button>
+    </div>
+  `).join('');
+
+  modal.style.display = 'flex';
+}
+function closeStockModal() {
+  document.getElementById('stockModal').style.display = 'none';
+}
+async function toggleItemStock(itemId) {
+  const res = await fetch(`/restaurants/api/items/${itemId}/toggle-stock/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN }
+  });
+  if (res.ok) {
+    fetchKdsOrders().then(openStockModal);
+  }
+}
+
+// WebSocket Connection to Kitchen Channel Group
+let kdsSocket = null;
+function initKdsWebSocket() {
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${wsProtocol}//${window.location.host}/ws/kitchen/${RESTAURANT_ID}/`;
+  kdsSocket = new WebSocket(wsUrl);
+
+  kdsSocket.onopen = function () {
+    document.getElementById('wsStatusBadge').textContent = 'WS: Connected';
+    document.getElementById('wsStatusBadge').style.background = '#065f46';
+  };
+
+  kdsSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+    fetchKdsOrders();
+  };
+
+  kdsSocket.onclose = function () {
+    document.getElementById('wsStatusBadge').textContent = 'WS: Reconnecting...';
+    document.getElementById('wsStatusBadge').style.background = '#b45309';
+    setTimeout(initKdsWebSocket, 3000);
+  };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  fetchKdsOrders();
+  initKdsWebSocket();
+  // Fallback Polling every 10 seconds
+  setInterval(fetchKdsOrders, 10000);
+});
+</script>
+{% endblock %}
+
