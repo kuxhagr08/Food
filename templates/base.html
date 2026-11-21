@@ -38,16 +38,16 @@
   <header class="main-header" id="mainHeader">
     <div class="container header-inner">
 
-      <!-- Left: Logo + Location (desktop) -->
+      <!-- Left: Logo + Location -->
       <div class="header-left">
         <a href="/" class="brand-logo">
           <span class="logo-emoji">🛵</span>
           <span>{{ SITE_NAME }}</span>
         </a>
-        <div class="header-location hidden-mobile" title="Change delivery location">
+        <div class="header-location" onclick="openLocationModal()" title="Detect or change delivery location" style="cursor:pointer;">
           <span class="loc-pin">📍</span>
-          <span class="loc-city">Connaught Place</span>
-          <span class="loc-sub">New Delhi ▾</span>
+          <span class="loc-city" id="navCity">Connaught Place</span>
+          <span class="loc-sub" id="navPincode">110001 ▾</span>
         </div>
       </div>
 
@@ -404,6 +404,165 @@
         setTimeout(() => t.remove(), 400);
       }, 4000);
     });
+
+    // ── Location Modal & Automatic GPS Detection ──────────────────
+    function openLocationModal() {
+      const modal = document.getElementById('locationModalOverlay');
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeLocationModal(e) {
+      if (e && e.target && e.target !== e.currentTarget && !e.target.classList.contains('location-modal-overlay')) return;
+      const modal = document.getElementById('locationModalOverlay');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function updateNavLocationDisplay(area, pincode) {
+      const cityEl = document.getElementById('navCity');
+      const pinEl = document.getElementById('navPincode');
+      if (cityEl) cityEl.textContent = area || 'Connaught Place';
+      if (pinEl) pinEl.textContent = (pincode ? pincode + ' ▾' : '▾');
+
+      const heroLocEl = document.getElementById('heroLocText');
+      if (heroLocEl) heroLocEl.textContent = `${area || 'Connaught Place'}, ${pincode || '110001'}`;
+    }
+
+    function applyPresetLocation(area, pincode, lat, lng) {
+      localStorage.setItem('user_area', area);
+      localStorage.setItem('user_pincode', pincode);
+      localStorage.setItem('user_lat', lat);
+      localStorage.setItem('user_lng', lng);
+      document.cookie = `user_lat=${lat}; path=/; max-age=604800`;
+      document.cookie = `user_lng=${lng}; path=/; max-age=604800`;
+
+      updateNavLocationDisplay(area, pincode);
+      const modal = document.getElementById('locationModalOverlay');
+      if (modal) modal.classList.remove('open');
+      showToast(`Location set to ${area} (${pincode})`, 'success');
+
+      window.dispatchEvent(new CustomEvent('locationUpdated', {
+        detail: { area, pincode, lat: parseFloat(lat), lng: parseFloat(lng) }
+      }));
+    }
+
+    function handleManualLocation(e) {
+      e.preventDefault();
+      const input = document.getElementById('manualLocationInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      // Extract 6-digit Indian pincode if typed
+      const pinMatch = val.match(/\b\d{6}\b/);
+      const pincode = pinMatch ? pinMatch[0] : '';
+      const area = val.replace(/\b\d{6}\b/, '').replace(/,/g, '').trim() || (pincode ? `Area ${pincode}` : 'New Delhi');
+
+      applyPresetLocation(area, pincode || '110001', 28.624, 77.222);
+    }
+
+    function detectGPSLocation() {
+      const statusMsg = document.getElementById('gpsStatusMsg');
+      const btn = document.getElementById('btnDetectGPS');
+      if (!navigator.geolocation) {
+        showToast("Geolocation is not supported by your browser.", "error");
+        return;
+      }
+
+      if (statusMsg) {
+        statusMsg.style.display = 'block';
+        statusMsg.textContent = 'Detecting GPS coordinates & pincode...';
+      }
+      if (btn) btn.disabled = true;
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          let area = 'Current Location';
+          let pincode = '';
+
+          try {
+            // Free reverse-geocode via OpenStreetMap Nominatim
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+              headers: { 'Accept': 'application/json' }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const addr = data.address || {};
+              pincode = addr.postcode || '';
+              area = addr.suburb || addr.neighbourhood || addr.city_district || addr.road || addr.city || 'Detected Location';
+            }
+          } catch (err) {
+            console.log("Reverse geocode fallback", err);
+          }
+
+          if (btn) btn.disabled = false;
+          if (statusMsg) statusMsg.style.display = 'none';
+
+          applyPresetLocation(area, pincode, lat, lng);
+        },
+        (error) => {
+          if (btn) btn.disabled = false;
+          if (statusMsg) {
+            statusMsg.style.display = 'block';
+            statusMsg.textContent = 'GPS permission denied or unavailable. Please choose your area below.';
+            statusMsg.style.color = '#BE123C';
+          }
+          showToast("Could not access GPS. Please choose your area.", "info");
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      );
+    }
+
+    // Initialize location from localStorage on first load
+    (function initSavedLocation() {
+      const savedArea = localStorage.getItem('user_area');
+      const savedPin = localStorage.getItem('user_pincode');
+      if (savedArea || savedPin) {
+        updateNavLocationDisplay(savedArea, savedPin);
+      }
+    })();
+  </script>
+
+  <!-- Location Modal Markup -->
+  <div class="location-modal-overlay" id="locationModalOverlay" onclick="closeLocationModal(event)">
+    <div class="location-modal-card" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:1.2rem;color:var(--text-heading);display:flex;align-items:center;gap:6px;">
+          <span>📍</span> Select Delivery Location
+        </div>
+        <button type="button" onclick="closeLocationModal()" style="background:none;border:none;font-size:1.4rem;color:var(--text-muted);cursor:pointer;">✕</button>
+      </div>
+
+      <button type="button" class="loc-detect-btn" id="btnDetectGPS" onclick="detectGPSLocation()">
+        <span style="font-size:1.2rem;">🎯</span>
+        <span>Use Current Location (GPS)</span>
+      </button>
+      <div id="gpsStatusMsg" style="font-size:0.8rem;text-align:center;margin-top:0.4rem;color:#0284C7;display:none;font-weight:600;">Detecting your locality &amp; pincode...</div>
+
+      <div style="display:flex;align-items:center;gap:0.75rem;margin:1.25rem 0;color:var(--text-light);font-size:0.8rem;">
+        <div style="flex:1;height:1px;background:#E8DDCF;"></div>
+        <span>OR ENTER PINCODE / AREA</span>
+        <div style="flex:1;height:1px;background:#E8DDCF;"></div>
+      </div>
+
+      <form onsubmit="handleManualLocation(event)" style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
+        <input type="text" id="manualLocationInput" class="form-input" placeholder="Enter Pincode (e.g. 110001, 201301) or Area..." style="flex:1;border-radius:var(--radius-lg);font-size:0.9rem;" required>
+        <button type="submit" class="btn btn-primary" style="border-radius:var(--radius-lg);padding:0.6rem 1.2rem;">Apply</button>
+      </form>
+
+      <div>
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.04em;">Popular Localities &amp; Pincodes:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Connaught Place', '110001', 28.632, 77.218)">📍 Connaught Place (110001)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Hauz Khas', '110016', 28.549, 77.200)">📍 Hauz Khas (110016)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Saket', '110017', 28.524, 77.216)">📍 Saket (110017)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Noida Sec-18', '201301', 28.570, 77.320)">📍 Noida Sec 18 (201301)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Cyber City', '122002', 28.495, 77.089)">📍 Cyber Hub (122002)</button>
+        </div>
+      </div>
+    </div>
+  </div>
   </script>
 
   {% block extra_js %}{% endblock %}
