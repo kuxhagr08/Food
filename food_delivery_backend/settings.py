@@ -108,10 +108,21 @@ if DB_ENGINE == 'postgres' or os.getenv('DATABASE_URL'):
             }
         }
 else:
+    IS_VERCEL = 'VERCEL' in os.environ
+    if IS_VERCEL:
+        import shutil
+        tmp_db = '/tmp/db.sqlite3'
+        orig_db = BASE_DIR / 'db.sqlite3'
+        if not os.path.exists(tmp_db) and os.path.exists(orig_db):
+            shutil.copy2(orig_db, tmp_db)
+        db_path = tmp_db
+    else:
+        db_path = BASE_DIR / 'db.sqlite3'
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': db_path,
         }
     }
 
@@ -137,7 +148,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -221,4 +232,5 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://192.168.1.3:8000',
     'http://0.0.0.0:8000',
+    'https://*.vercel.app',
 ]
