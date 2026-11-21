@@ -74,12 +74,17 @@ async function addToCart(itemId, quantity = 1, clearExisting = false) {
 
     // Update quantity stepper on page if present
     const stepper = document.getElementById(`stepper-${itemId}`);
-    if (stepper) {
+    const addBtn = document.getElementById(`add-btn-${itemId}`);
+    if (stepper && addBtn) {
       const valElem = stepper.querySelector('.qty-value');
       if (valElem) valElem.textContent = data.quantity;
-      stepper.style.display = 'inline-flex';
-      const addBtn = document.getElementById(`add-btn-${itemId}`);
-      if (addBtn) addBtn.style.display = 'none';
+      if (data.quantity > 0) {
+        stepper.style.display = 'inline-flex';
+        addBtn.style.display = 'none';
+      } else {
+        stepper.style.display = 'none';
+        addBtn.style.display = 'block';
+      }
     }
   } catch (err) {
     showToast("Network error. Please try again.", "error");
