@@ -17,7 +17,14 @@ function getCookie(name) {
   return cookieValue;
 }
 
-const CSRF_TOKEN = getCookie('csrftoken');
+function getCsrfToken() {
+  return window.CSRF_TOKEN ||
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+         getCookie('csrftoken') ||
+         '';
+}
+
+const CSRF_TOKEN = getCsrfToken();
 
 function showToast(message, type = 'info', duration = 3500) {
   let container = document.getElementById('toastContainer');
@@ -50,7 +57,7 @@ async function addToCart(itemId, quantity = 1, clearExisting = false) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF_TOKEN
+        'X-CSRFToken': getCsrfToken()
       },
       body: JSON.stringify({ item_id: itemId, quantity, clear_existing: clearExisting })
     });
@@ -97,7 +104,7 @@ async function updateCartItem(itemId, action) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF_TOKEN
+        'X-CSRFToken': getCsrfToken()
       },
       body: JSON.stringify({ item_id: itemId, action })
     });

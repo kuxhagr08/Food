@@ -145,7 +145,7 @@ async function applyCouponCode() {
   if (!code) { showToast('Please enter a coupon code.', 'warning'); return; }
   const res = await fetch('/orders/api/cart/apply-coupon/', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
     body: JSON.stringify({ code })
   });
   const data = await res.json();
@@ -156,7 +156,7 @@ async function applyCouponCode() {
 async function removeCouponCode() {
   const res = await fetch('/orders/api/cart/apply-coupon/', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
     body: JSON.stringify({ code: '' })
   });
   if (res.ok) { showToast('Coupon removed', 'info'); window.location.reload(); }

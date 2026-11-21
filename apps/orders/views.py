@@ -22,8 +22,9 @@ def get_or_create_user_cart(request):
         return cart
     else:
         if not request.session.session_key:
-            request.session.create()
+            request.session.save()
         session_key = request.session.session_key
+        request.session.modified = True
         cart, _ = Cart.objects.get_or_create(session_key=session_key)
         return cart
 
@@ -115,7 +116,11 @@ class UpdateCartItemAPI(APIView):
         action = request.data.get('action') # 'increase', 'decrease', 'remove'
 
         cart = get_or_create_user_cart(request)
-        cart_item = get_object_or_404(CartItem, cart=cart, menu_item_id=item_id)
+        cart_item = CartItem.objects.filter(cart=cart, menu_item_id=item_id).first()
+        if not cart_item:
+            cart_item = CartItem.objects.filter(cart=cart, id=item_id).first()
+        if not cart_item:
+            return Response({'error': 'Item not found in cart.'}, status=status.HTTP_404_NOT_FOUND)
 
         if action == 'increase':
             cart_item.quantity += 1

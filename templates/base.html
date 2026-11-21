@@ -18,6 +18,11 @@
   <!-- Design System CSS (with cache buster v4.0) -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}?v=4.0">
 
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+  </script>
+
   <style>
     /* Critical drawer protection: NEVER show drawer on desktop or closed on mobile */
     @media (min-width: 769px) {
