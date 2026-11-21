@@ -33,48 +33,97 @@ class RoleBasedRedirectView(View):
             return redirect('/')
 
 
+def merge_anonymous_cart_into_user_cart(old_session_key, user):
+    """Transfers all items from anonymous session cart into the authenticated user cart."""
+    if not old_session_key:
+        return
+    try:
+        from apps.orders.models import Cart, CartItem
+        anon_cart = Cart.objects.filter(session_key=old_session_key, user__isnull=True).first()
+        if not anon_cart or not anon_cart.items.exists():
+            return
+
+        user_cart, _ = Cart.objects.get_or_create(user=user)
+        if not user_cart.restaurant:
+            user_cart.restaurant = anon_cart.restaurant
+            user_cart.applied_coupon = anon_cart.applied_coupon
+            user_cart.save()
+
+        if user_cart.restaurant == anon_cart.restaurant:
+            for item in anon_cart.items.all():
+                existing = user_cart.items.filter(menu_item=item.menu_item).first()
+                if existing:
+                    existing.quantity += item.quantity
+                    existing.save()
+                else:
+                    item.cart = user_cart
+                    item.save()
+
+        anon_cart.items.all().delete()
+        anon_cart.delete()
+    except Exception as e:
+        print("Cart merge error:", e)
+
+
 class CustomLoginView(View):
     template_name = 'accounts/login.html'
 
     def get(self, request):
+        next_url = request.GET.get('next', '')
         if request.user.is_authenticated:
+            if next_url and next_url != '/accounts/redirect/':
+                return redirect(next_url)
             return redirect('accounts:redirect')
         form = LoginForm()
-        return render(request, self.template_name, {'form': form, 'next': request.GET.get('next', '')})
+        return render(request, self.template_name, {'form': form, 'next': next_url})
 
     def post(self, request):
+        old_session_key = request.session.session_key
         form = LoginForm(request, data=request.POST)
+        next_url = request.POST.get('next') or request.GET.get('next') or ''
+
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
+            user.backend = 'apps.accounts.backends.EmailOrUsernameModelBackend'
+            login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
+            merge_anonymous_cart_into_user_cart(old_session_key, user)
             messages.success(request, f"Welcome back, {user.first_name or user.email}!")
-            next_url = request.POST.get('next') or request.GET.get('next')
-            if next_url:
+            if next_url and next_url != '/accounts/redirect/':
                 return redirect(next_url)
             return redirect('accounts:redirect')
         else:
-            messages.error(request, "Invalid email or password.")
-            return render(request, self.template_name, {'form': form, 'next': request.POST.get('next', '')})
+            messages.error(request, "Invalid email/username or password.")
+            return render(request, self.template_name, {'form': form, 'next': next_url})
 
 
 class RegisterView(View):
     template_name = 'accounts/register.html'
 
     def get(self, request):
+        next_url = request.GET.get('next', '')
         if request.user.is_authenticated:
+            if next_url and next_url != '/accounts/redirect/':
+                return redirect(next_url)
             return redirect('accounts:redirect')
         form = RegisterForm()
-        return render(request, self.template_name, {'form': form})
+        return render(request, self.template_name, {'form': form, 'next': next_url})
 
     def post(self, request):
+        old_session_key = request.session.session_key
         form = RegisterForm(request.POST)
+        next_url = request.POST.get('next') or request.GET.get('next') or ''
+
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            messages.success(request, "Registration successful! Welcome to QuickBite.")
+            user.backend = 'apps.accounts.backends.EmailOrUsernameModelBackend'
+            login(request, user, backend='apps.accounts.backends.EmailOrUsernameModelBackend')
+            merge_anonymous_cart_into_user_cart(old_session_key, user)
+            messages.success(request, f"Welcome to QuickBite, {user.first_name}!")
+            if next_url and next_url != '/accounts/redirect/':
+                return redirect(next_url)
             return redirect('/')
         else:
-            return render(request, self.template_name, {'form': form})
+            return render(request, self.template_name, {'form': form, 'next': next_url})
 
 
 def custom_logout(request):

@@ -225,8 +225,14 @@ else:
 # SAMEORIGIN is deliberately chosen to support the in-app CMS visual preview editor
 SILENCED_SYSTEM_CHECKS = ['security.W019']
 
+# Session settings: use signed cookies to guarantee persistence across serverless invocations
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 1209600  # 14 days
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # Required for fetch/ajax csrf tokens from cookie
+CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://localhost:8000',

@@ -69,7 +69,7 @@
 
       <div style="text-align:center;margin-top:1.5rem;font-size:0.9rem;color:var(--text-muted);">
         Don't have an account?
-        <a href="{% url 'accounts:register' %}" style="color:var(--brand-1);font-weight:700;">Sign up free</a>
+        <a href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}" style="color:var(--brand-1);font-weight:700;">Sign up free</a>
       </div>
     </div>
   </div>

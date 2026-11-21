@@ -19,13 +19,21 @@ class EmailOrUsernameModelBackend(ModelBackend):
 
         # Try exact email match first
         user = User.objects.filter(email__iexact=username).first()
-        
+
+        # Try first_name match (e.g. 'kuxhagr', 'Kushagr', 'rahul')
+        if not user:
+            user = User.objects.filter(first_name__iexact=username).first()
+
         # If not found, try username prefix (e.g. kuxhagr -> kuxhagr@...)
         if not user:
             user = User.objects.filter(
                 Q(email__istartswith=f"{username}@") |
                 Q(email__iexact=f"{username}@quickbite.com")
             ).first()
+
+        # If not found, try phone
+        if not user and username.replace('+', '').isdigit():
+            user = User.objects.filter(phone=username).first()
 
         if user and user.check_password(password) and self.user_can_authenticate(user):
             return user

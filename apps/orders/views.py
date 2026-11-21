@@ -18,7 +18,17 @@ from .services import PriceCalculator, OrderStateMachine, InvalidOrderStateTrans
 
 def get_or_create_user_cart(request):
     if request.user.is_authenticated:
-        cart, _ = Cart.objects.get_or_create(user=request.user)
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart:
+            # Check if there is an anonymous session cart to adopt
+            if request.session.session_key:
+                anon_cart = Cart.objects.filter(session_key=request.session.session_key, user__isnull=True).first()
+                if anon_cart and anon_cart.items.exists():
+                    anon_cart.user = request.user
+                    anon_cart.session_key = None
+                    anon_cart.save()
+                    return anon_cart
+            cart = Cart.objects.create(user=request.user)
         return cart
     else:
         if not request.session.session_key:
