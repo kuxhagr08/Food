@@ -1,94 +1,323 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Admin Dashboard — QuickBite{% endblock %}
+{% block title %}Admin Control Center — QuickBite{% endblock %}
 
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-.admin-quick-links {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-.admin-ql-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-  padding: 0.9rem 0.5rem; border-radius: var(--radius-md);
-  border: 1.5px solid var(--border-color); background: var(--bg-card);
-  font-size: 0.8rem; font-weight: 700; color: var(--text-muted);
-  cursor: pointer; text-decoration: none; text-align: center;
-  transition: all 0.15s ease; font-family: var(--font-display);
-}
-.admin-ql-btn:hover { border-color: var(--brand-1); color: var(--brand-1); background: var(--brand-1-light); transform: translateY(-2px); }
-.admin-ql-btn .ql-icon { font-size: 1.5rem; }
+  /* Hide customer bottom nav on admin panel */
+  .mobile-bottom-nav { display: none !important; }
+  body { padding-bottom: 2.5rem !important; }
+
+  /* Admin Header */
+  .admin-header-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .admin-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 3vw, 1.85rem);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--text-heading);
+    margin: 0;
+  }
+  .admin-sub {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Quick Actions Bar */
+  .admin-actions-bar {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1.5rem;
+  }
+  .admin-actions-bar::-webkit-scrollbar { display: none; }
+
+  .admin-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: var(--radius-full);
+    border: 1.5px solid var(--border-color);
+    background: #fff;
+    color: var(--text-main);
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: var(--font-display);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-xs);
+  }
+  .admin-pill-btn:hover {
+    border-color: var(--brand-1);
+    color: var(--brand-1);
+    background: var(--brand-1-light);
+    transform: translateY(-1px);
+  }
+  .admin-pill-btn.primary {
+    background: var(--grad-primary);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(255, 59, 92, 0.3);
+  }
+  .admin-pill-btn.primary:hover {
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(255, 59, 92, 0.4);
+  }
+  .admin-pill-btn.secondary {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    color: #fff;
+    border-color: transparent;
+  }
+  .admin-pill-btn.secondary:hover { color: #fff; }
+
+  /* 2x2 Stat Cards Grid (mobile friendly) */
+  .admin-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (min-width: 900px) {
+    .admin-stat-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+  }
+
+  .admin-stat-box {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 1.1rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .admin-stat-box:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .admin-stat-box::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .admin-stat-box.card-revenue::after { background: var(--grad-primary); }
+  .admin-stat-box.card-orders::after { background: linear-gradient(90deg, #ff9f1c, #ffca66); }
+  .admin-stat-box.card-riders::after { background: linear-gradient(90deg, #00c48c, #38ef7d); }
+  .admin-stat-box.card-links::after { background: linear-gradient(90deg, #6c47ff, #c471ed); }
+
+  .stat-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  .stat-emoji-circle {
+    width: 38px; height: 38px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: var(--bg-subtle);
+  }
+  .stat-big-num {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3.5vw, 2.1rem);
+    font-weight: 900;
+    color: var(--text-heading);
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 0.25rem;
+  }
+  .stat-caption {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+  }
+  .stat-subtext {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    margin-top: 0.35rem;
+  }
+
+  /* Quick Nav Inside 4th Stat Box */
+  .stat-nav-mini {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+  .stat-nav-mini-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-decoration: none;
+    font-family: var(--font-display);
+    transition: all 0.15s;
+    justify-content: center;
+  }
+  .stat-nav-mini-btn:hover {
+    background: var(--brand-1-light);
+    border-color: var(--brand-1);
+    color: var(--brand-1);
+  }
+
+  /* Chart Card */
+  .chart-card {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .chart-canvas-wrap {
+    position: relative;
+    height: 240px;
+    width: 100%;
+  }
+  @media (min-width: 768px) {
+    .chart-canvas-wrap { height: 300px; }
+  }
+
+  /* Table Card */
+  .table-card {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    padding: 1.25rem;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container page-section">
+<div class="container" style="padding-top: 1.5rem; max-width: 1200px;">
 
-  <!-- Page Header -->
-  <div class="section-header" style="margin-bottom:2rem;flex-wrap:wrap;gap:1rem;">
+  <!-- Admin Title Strip -->
+  <div class="admin-header-strip">
     <div>
-      <h1 style="font-family:var(--font-display);font-size:1.85rem;font-weight:900;margin-bottom:0.3rem;">
-        ⚡ Admin Control Center
-      </h1>
-      <p style="color:var(--text-muted);font-size:0.92rem;margin:0;">Real-time overview · Revenue analytics · Order dispatching</p>
+      <h1 class="admin-title">⚡ Admin Control Center</h1>
+      <div class="admin-sub">Real-time platform overview · Dispatch control · Operations</div>
     </div>
-    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-      <a href="{% url 'cms:pages_list' %}" class="btn btn-secondary btn-sm">🎨 CMS Editor</a>
-      <a href="{% url 'core:admin_export_csv' %}" class="btn btn-primary btn-sm">📥 Export CSV</a>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <a href="{% url 'cms:pages_list' %}" class="admin-pill-btn secondary">🎨 CMS Editor</a>
+      <a href="{% url 'core:admin_export_csv' %}" class="admin-pill-btn primary">📥 Export CSV</a>
     </div>
   </div>
 
-  <!-- Stat Cards -->
-  <div class="grid-4 stagger" style="margin-bottom:2rem;">
-    <div class="stat-card brand-1">
-      <div class="stat-icon brand-1">💰</div>
-      <div class="stat-value">₹{{ today_revenue|floatformat:0 }}</div>
-      <div class="stat-label">Today's Revenue</div>
-      <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--success);font-weight:700;">{{ today_order_count }} orders today</div>
+  <!-- Quick Actions Pills (horizontally scrollable on mobile) -->
+  <div class="admin-actions-bar">
+    <a href="{% url 'core:admin_orders' %}" class="admin-pill-btn">📋 Orders ({{ active_orders_count }})</a>
+    <a href="{% url 'core:admin_users' %}" class="admin-pill-btn">👥 Users</a>
+    <a href="{% url 'core:admin_reports' %}" class="admin-pill-btn">📊 Sales Reports</a>
+    <a href="/django-admin/" class="admin-pill-btn">⚙️ Django Admin</a>
+    <a href="{% url 'kitchen:dashboard' %}" class="admin-pill-btn">🍳 Kitchen KDS</a>
+    <a href="{% url 'delivery:dashboard' %}" class="admin-pill-btn">🏍️ Delivery Portal</a>
+  </div>
+
+  <!-- 2x2 Stat Cards Grid -->
+  <div class="admin-stat-grid">
+    <!-- Card 1: Today Revenue -->
+    <div class="admin-stat-box card-revenue">
+      <div class="stat-top-row">
+        <span class="stat-caption">Revenue</span>
+        <div class="stat-emoji-circle" style="background:#fff0f3;">💰</div>
+      </div>
+      <div class="stat-big-num" style="color:var(--brand-1);">₹{{ today_revenue|floatformat:0 }}</div>
+      <div style="font-size:0.75rem;font-weight:700;color:var(--success);">{{ today_order_count }} orders today</div>
     </div>
-    <div class="stat-card brand-2">
-      <div class="stat-icon brand-2">🔥</div>
-      <div class="stat-value">{{ active_orders_count }}</div>
-      <div class="stat-label">Active Orders</div>
-      <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--text-muted);">In kitchen / out for delivery</div>
+
+    <!-- Card 2: Active Orders -->
+    <div class="admin-stat-box card-orders">
+      <div class="stat-top-row">
+        <span class="stat-caption">Active Orders</span>
+        <div class="stat-emoji-circle" style="background:#fff8ec;">🔥</div>
+      </div>
+      <div class="stat-big-num" style="color:var(--brand-2);">{{ active_orders_count }}</div>
+      <div class="stat-subtext">Kitchen prep / delivery</div>
     </div>
-    <div class="stat-card success">
-      <div class="stat-icon success">🏍️</div>
-      <div class="stat-value">{{ active_partners_count }}</div>
-      <div class="stat-label">Active Partners</div>
-      <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--text-muted);">Online & sharing GPS</div>
+
+    <!-- Card 3: Active Partners -->
+    <div class="admin-stat-box card-riders">
+      <div class="stat-top-row">
+        <span class="stat-caption">Riders Online</span>
+        <div class="stat-emoji-circle" style="background:#e8faf5;">🏍️</div>
+      </div>
+      <div class="stat-big-num" style="color:var(--success);">{{ active_partners_count }}</div>
+      <div class="stat-subtext">Sharing GPS location</div>
     </div>
-    <div class="stat-card brand-3">
-      <div class="stat-icon brand-3">🧭</div>
-      <div class="stat-label" style="font-weight:700;font-size:0.88rem;margin-bottom:0.75rem;">Quick Navigation</div>
-      <div class="admin-quick-links" style="grid-template-columns:1fr 1fr;gap:0.4rem;margin-top:0;">
-        <a href="{% url 'core:admin_orders' %}" class="admin-ql-btn"><span class="ql-icon">📋</span>Orders</a>
-        <a href="{% url 'core:admin_users' %}" class="admin-ql-btn"><span class="ql-icon">👥</span>Users</a>
-        <a href="{% url 'core:admin_reports' %}" class="admin-ql-btn"><span class="ql-icon">📊</span>Reports</a>
-        <a href="/admin/" class="admin-ql-btn"><span class="ql-icon">⚙️</span>Django</a>
+
+    <!-- Card 4: Quick Navigation -->
+    <div class="admin-stat-box card-links">
+      <div class="stat-top-row">
+        <span class="stat-caption">Shortcuts</span>
+        <div class="stat-emoji-circle" style="background:#f0edff;">🧭</div>
+      </div>
+      <div class="stat-nav-mini">
+        <a href="{% url 'core:admin_orders' %}" class="stat-nav-mini-btn">📋 Orders</a>
+        <a href="{% url 'core:admin_users' %}" class="stat-nav-mini-btn">👥 Users</a>
+        <a href="{% url 'core:admin_reports' %}" class="stat-nav-mini-btn">📊 Reports</a>
+        <a href="/django-admin/" class="stat-nav-mini-btn">⚙️ Admin</a>
       </div>
     </div>
   </div>
 
-  <!-- Revenue Chart -->
-  <div class="card" style="padding:1.5rem;margin-bottom:2rem;">
-    <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:800;margin-bottom:1.25rem;">
-      📈 Past 7 Days — Revenue &amp; Orders
-    </h3>
-    <div style="height:280px;width:100%;">
+  <!-- Revenue & Orders Chart -->
+  <div class="chart-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+      <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:800;margin:0;">
+        📈 Past 7 Days — Revenue &amp; Orders
+      </h3>
+      <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">Daily performance metrics</span>
+    </div>
+    <div class="chart-canvas-wrap">
       <canvas id="revenueChart"></canvas>
     </div>
   </div>
 
   <!-- Recent Orders Table -->
-  <div class="card" style="padding:1.5rem;">
-    <div class="section-header" style="margin-bottom:1.1rem;">
-      <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:800;margin:0;">Recent Orders & Dispatch</h3>
-      <a href="{% url 'core:admin_orders' %}" style="font-size:0.85rem;color:var(--brand-1);font-weight:700;">View All →</a>
+  <div class="table-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+      <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:800;margin:0;">
+        📦 Recent Orders &amp; Dispatch
+      </h3>
+      <a href="{% url 'core:admin_orders' %}" class="btn btn-outline btn-sm" style="font-size:0.78rem;padding:4px 10px;min-height:30px;">
+        View All Orders →
+      </a>
     </div>
 
     <div class="table-wrap">
@@ -100,16 +329,20 @@
             <th>Customer</th>
             <th>Total</th>
             <th>Status</th>
-            <th>Partner</th>
+            <th>Rider</th>
             <th style="text-align:right;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for o in recent_orders %}
             <tr>
-              <td><a href="{% url 'orders:live_tracking' o.id %}" style="color:var(--brand-1);font-weight:700;">#{{ o.order_number }}</a></td>
-              <td>{{ o.restaurant.name }}</td>
-              <td style="color:var(--text-muted);">{{ o.customer.email|truncatechars:28 }}</td>
+              <td>
+                <a href="{% url 'orders:live_tracking' o.id %}" style="color:var(--brand-1);font-weight:800;font-family:var(--font-display);">
+                  #{{ o.order_number }}
+                </a>
+              </td>
+              <td style="font-weight:600;">{{ o.restaurant.name }}</td>
+              <td style="color:var(--text-muted);font-size:0.82rem;">{{ o.customer.email|truncatechars:22 }}</td>
               <td><strong>₹{{ o.total_amount|floatformat:0 }}</strong></td>
               <td>
                 <span class="badge {% if o.status == 'delivered' %}badge-success{% elif o.status == 'cancelled' %}badge-danger{% elif o.status == 'preparing' %}badge-warning{% else %}badge-info{% endif %}">
@@ -118,24 +351,26 @@
               </td>
               <td>
                 {% if o.delivery_partner %}
-                  <span style="font-weight:600;font-size:0.85rem;">🛵 {{ o.delivery_partner.get_full_name|default:o.delivery_partner.email }}</span>
+                  <span style="font-weight:600;font-size:0.82rem;color:var(--text-main);">
+                    🛵 {{ o.delivery_partner.get_full_name|default:o.delivery_partner.email|truncatechars:15 }}
+                  </span>
                 {% else %}
                   <form method="POST" action="{% url 'core:admin_manual_assign' o.id %}" style="display:flex;gap:0.3rem;align-items:center;">
                     {% csrf_token %}
-                    <select name="partner_id" class="form-select" style="font-size:0.75rem;padding:3px 6px;min-height:30px;width:auto;" required>
+                    <select name="partner_id" class="form-select" style="font-size:0.75rem;padding:2px 6px;min-height:28px;width:auto;" required>
                       <option value="">Assign…</option>
                       {% for dp in delivery_partners %}
-                        <option value="{{ dp.id }}">{{ dp.get_full_name|default:dp.email }}</option>
+                        <option value="{{ dp.id }}">{{ dp.get_full_name|default:dp.email|truncatechars:12 }}</option>
                       {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-sm btn-outline" style="padding:3px 8px;min-height:30px;font-size:0.75rem;">Go</button>
+                    <button type="submit" class="btn btn-sm btn-outline" style="padding:2px 6px;min-height:28px;font-size:0.72rem;">Go</button>
                   </form>
                 {% endif %}
               </td>
               <td style="text-align:right;">
                 <form method="POST" action="{% url 'core:admin_change_status' o.id %}" style="display:inline-flex;gap:0.25rem;">
                   {% csrf_token %}
-                  <select name="status" class="form-select" style="font-size:0.75rem;padding:3px 6px;min-height:30px;width:auto;" onchange="this.form.submit()">
+                  <select name="status" class="form-select" style="font-size:0.75rem;padding:2px 6px;min-height:28px;width:auto;" onchange="this.form.submit()">
                     <option value="">Change…</option>
                     <option value="accepted">Accepted</option>
                     <option value="preparing">Preparing</option>
@@ -148,46 +383,87 @@
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">No orders yet today.</td></tr>
+            <tr>
+              <td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+                <div style="font-size:2rem;margin-bottom:0.5rem;">📦</div>
+                No orders placed yet.
+              </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+
 </div>
 
+<!-- Chart Script -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const ctx = document.getElementById('revenueChart').getContext('2d');
+  const ctx = document.getElementById('revenueChart');
+  if (!ctx) return;
+
+  const rawLabels = {{ chart_labels|safe|default:"[]" }};
+  const rawRevenue = {{ chart_revenue|safe|default:"[]" }};
+  const rawOrders = {{ chart_orders|safe|default:"[]" }};
+
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: {{ days_labels|safe }},
+      labels: rawLabels.length ? rawLabels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
       datasets: [
         {
           label: 'Revenue (₹)',
-          data: {{ revenue_data|safe }},
+          data: rawRevenue.length ? rawRevenue : [0, 0, 0, 0, 0, 0, 0],
           borderColor: '#ff3b5c',
-          backgroundColor: 'rgba(255,59,92,0.08)',
-          fill: true, tension: 0.4, yAxisID: 'y',
-          pointBackgroundColor: '#ff3b5c', pointRadius: 4
+          backgroundColor: 'rgba(255, 59, 92, 0.08)',
+          fill: true,
+          tension: 0.35,
+          yAxisID: 'y',
+          borderWidth: 2.5,
+          pointRadius: 3,
         },
         {
           label: 'Orders',
-          data: {{ order_data|safe }},
+          data: rawOrders.length ? rawOrders : [0, 0, 0, 0, 0, 0, 0],
           borderColor: '#6c47ff',
           backgroundColor: 'transparent',
-          borderDash: [5, 5], tension: 0.4, yAxisID: 'y1',
-          pointBackgroundColor: '#6c47ff', pointRadius: 4
+          borderDash: [5, 5],
+          tension: 0.35,
+          yAxisID: 'y1',
+          borderWidth: 2,
+          pointRadius: 3,
         }
       ]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            boxWidth: 12,
+            font: { family: 'Space Grotesk', size: 11, weight: '700' }
+          }
+        }
+      },
       scales: {
-        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Revenue (₹)' } },
-        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Orders' } }
+        x: { grid: { display: false } },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          grid: { color: 'rgba(0,0,0,0.04)' }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { stepSize: 1 }
+        }
       }
     }
   });

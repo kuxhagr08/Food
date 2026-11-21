@@ -2,9 +2,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 
 urlpatterns = [
-    path('django-admin/', admin.site.urls), # Changed from default /admin/ for security
+    path('django-admin/', admin.site.urls), # Admin site URL
+    path('admin/', RedirectView.as_view(url='/django-admin/', permanent=False)), # Redirect /admin/ to /django-admin/
     path('accounts/', include('apps.accounts.urls', namespace='accounts')),
     path('restaurants/', include('apps.restaurants.urls', namespace='restaurants')),
     path('orders/', include('apps.orders.urls', namespace='orders')),
