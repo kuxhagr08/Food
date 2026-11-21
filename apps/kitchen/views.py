@@ -106,6 +106,9 @@ class AcceptKitchenOrderAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, order_id):
+        if getattr(request.user, 'role', None) not in ['kitchen_staff', 'admin'] and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
         order = get_object_or_404(Order, id=order_id)
         prep_time = int(request.data.get('prep_time', 20))
 
@@ -126,6 +129,9 @@ class RejectKitchenOrderAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, order_id):
+        if getattr(request.user, 'role', None) not in ['kitchen_staff', 'admin'] and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
         order = get_object_or_404(Order, id=order_id)
         reason = request.data.get('reason', 'Kitchen busy or item unavailable').strip()
 
@@ -146,6 +152,9 @@ class MarkPreparingAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, order_id):
+        if getattr(request.user, 'role', None) not in ['kitchen_staff', 'admin'] and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
         order = get_object_or_404(Order, id=order_id)
         try:
             OrderStateMachine.transition_to(
@@ -163,6 +172,9 @@ class MarkReadyAPI(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, order_id):
+        if getattr(request.user, 'role', None) not in ['kitchen_staff', 'admin'] and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
         order = get_object_or_404(Order, id=order_id)
         try:
             OrderStateMachine.transition_to(

@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import format_html, escape
 from django.utils.safestring import mark_safe
 from django.core.cache import cache
 from apps.cms.models import CMSPage
@@ -32,11 +33,18 @@ def cms_block(context, route, key, default_content=""):
             cached_val = default_content
         cache.set(cache_key, cached_val, timeout=300)
 
-    content = cached_val or default_content
+    raw_content = cached_val or default_content
+    # Sanitize content with nh3 whitelist to prevent XSS
+    sanitized = sanitize_html(str(raw_content))
+    content_safe = mark_safe(sanitized)  # nosec B308, B703 - sanitized with nh3 whitelist
 
     if is_edit_mode:
-        return mark_safe(f'<span class="cms-editable-inline" data-cms-key="{key}" contenteditable="true" title="Click to edit text">{content}</span>')
-    return mark_safe(content)
+        return format_html(
+            '<span class="cms-editable-inline" data-cms-key="{}" contenteditable="true" title="Click to edit text">{}</span>',
+            key,
+            content_safe
+        )
+    return content_safe
 
 
 @register.simple_tag(takes_context=True)
@@ -64,6 +72,11 @@ def cms_image(context, route, key, default_src="", alt_text=""):
     src = cached_src or default_src
 
     if is_edit_mode:
-        return mark_safe(f'<div class="cms-image-wrapper" data-cms-image-key="{key}"><img src="{src}" alt="{alt_text}" data-cms-img="{key}"><button type="button" class="cms-img-change-btn" onclick="window.parent.triggerImageUpload(\'{key}\')">📷 Replace</button></div>')
-    return mark_safe(f'<img src="{src}" alt="{alt_text}">')
+        return format_html(
+            '<div class="cms-image-wrapper" data-cms-image-key="{0}"><img src="{1}" alt="{2}" data-cms-img="{0}"><button type="button" class="cms-img-change-btn" onclick="window.parent.triggerImageUpload(\'{0}\')">📷 Replace</button></div>',
+            key,
+            src,
+            alt_text
+        )
+    return format_html('<img src="{}" alt="{}">', src, alt_text)
 

@@ -122,6 +122,9 @@ class AvailableOrdersAPI(APIView):
 
     def get(self, request):
         user = request.user
+        if getattr(user, 'role', None) not in ['delivery_partner', 'admin'] and not user.is_superuser:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
         p_lat = user.current_lat or 28.6139
         p_lng = user.current_lng or 77.2090
 

@@ -311,9 +311,12 @@ class PlaceOrderAPI(APIView):
 
 class LiveOrderTrackingView(View):
     def get(self, request, order_id):
+        if not request.user.is_authenticated:
+            return redirect(f'/accounts/login/?next={request.get_full_path()}')
+
         # Allow customer who owns the order, or staff/admin
         order = get_object_or_404(Order.objects.select_related('restaurant', 'delivery_partner', 'customer'), id=order_id)
-        if request.user != order.customer and request.user.role not in ['admin', 'kitchen_staff', 'delivery_partner'] and not request.user.is_superuser:
+        if request.user != order.customer and getattr(request.user, 'role', None) not in ['admin', 'kitchen_staff', 'delivery_partner'] and not request.user.is_superuser:
             messages.error(request, "Unauthorized access to order tracking.")
             return redirect('/')
 
