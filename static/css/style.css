@@ -2000,6 +2000,14 @@ tbody tr:hover { background: var(--bg-subtle); }
 }
 .mobile-drawer.open { transform: translateX(0); }
 
+@media (min-width: 769px) {
+  .mobile-drawer,
+  .drawer-overlay,
+  .hamburger-btn {
+    display: none !important;
+  }
+}
+
 /* Lock scroll when drawer open */
 body.drawer-open { overflow: hidden; }
 
