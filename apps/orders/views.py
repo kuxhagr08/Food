@@ -222,7 +222,10 @@ class PlaceOrderAPI(APIView):
         is_dine_in = (order_type == 'DINE_IN')
 
         address_id = request.data.get('address_id')
-        payment_method = request.data.get('payment_method', 'COD') # 'COD' or 'ONLINE'
+        raw_payment_method = request.data.get('payment_method', 'COD').upper()
+        # Normalize payment method into Model's supported choices ('COD' or 'ONLINE')
+        is_online = raw_payment_method in ['ONLINE', 'UPI', 'CARD', 'NETBANKING']
+        payment_method = 'ONLINE' if is_online else 'COD'
         special_instructions = request.data.get('special_instructions', '').strip()
 
         if is_dine_in:
@@ -233,11 +236,40 @@ class PlaceOrderAPI(APIView):
             del_lat = cart.restaurant.latitude
             del_lng = cart.restaurant.longitude
         else:
-            address = get_object_or_404(Address, id=address_id, user=request.user)
-            address_title = address.title
-            address_text = f"{address.address_line1}, {address.address_line2 or ''}, {address.city} - {address.pincode}"
-            del_lat = address.latitude
-            del_lng = address.longitude
+            address = None
+            if address_id:
+                address = Address.objects.filter(id=address_id, user=request.user).first()
+            if not address:
+                address = request.user.addresses.filter(is_default=True).first() or request.user.addresses.first()
+
+            if address:
+                address_title = address.title
+                address_text = f"{address.address_line1}, {address.address_line2 or ''}, {address.city} - {address.pincode}".replace(' ,', '')
+                del_lat = address.latitude or 28.570
+                del_lng = address.longitude or 77.320
+            else:
+                # Seamless checkout: auto-create address from request payload or user location
+                line1 = (request.data.get('address_line1') or 'Address').strip()
+                city = (request.data.get('city') or 'Noida').strip()
+                pincode = (request.data.get('pincode') or '201301').strip()
+                try:
+                    del_lat = float(request.data.get('latitude', 28.570))
+                    del_lng = float(request.data.get('longitude', 77.320))
+                except (ValueError, TypeError):
+                    del_lat, del_lng = 28.570, 77.320
+
+                new_addr = Address.objects.create(
+                    user=request.user,
+                    title='Home',
+                    address_line1=line1,
+                    city=city,
+                    pincode=pincode,
+                    latitude=del_lat,
+                    longitude=del_lng,
+                    is_default=True
+                )
+                address_title = new_addr.title
+                address_text = f"{new_addr.address_line1}, {new_addr.city} - {new_addr.pincode}"
 
         # Server-side price calculation
         items_data = [{'menu_item': ci.menu_item, 'quantity': ci.quantity} for ci in cart_items]
@@ -300,12 +332,16 @@ class PlaceOrderAPI(APIView):
             # Record initial history
             OrderStateMachine.broadcast_order_update(order, 'created', 'placed')
 
+        method_param = raw_payment_method.lower() if is_online else 'cod'
+        redirect_url = f"/payments/mock-gateway/{order.id}/?method={method_param}" if is_online else f"/orders/{order.id}/tracking/"
+
         return Response({
             'success': True,
             'order_id': str(order.id),
             'order_number': order.order_number,
             'total_amount': order.total_amount,
-            'redirect_url': f"/orders/{order.id}/tracking/"
+            'is_online': is_online,
+            'redirect_url': redirect_url
         })
 
 

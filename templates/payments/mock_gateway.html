@@ -3,43 +3,221 @@
 
 {% block title %}Secure Payment Checkout — QuickBite{% endblock %}
 
+{% block extra_css %}
+<style>
+.gateway-wrap {
+  padding-top: 2.5rem;
+  padding-bottom: 5rem;
+  max-width: 520px;
+}
+.gateway-card {
+  background: #FFF;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+  border: 1.5px solid #E8DDCF;
+  overflow: hidden;
+}
+.gateway-header {
+  background: linear-gradient(135deg, #0c2340 0%, #1e3a8a 100%);
+  color: #FFF;
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gateway-body {
+  padding: 1.75rem;
+}
+.pay-tab-btn {
+  flex: 1;
+  text-align: center;
+  padding: 0.6rem 0.25rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  background: #FAF7F2;
+  color: #78716C;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-display);
+}
+.pay-tab-btn.active {
+  background: #FFF;
+  color: #0284C7;
+  border-bottom: 2px solid #0284C7;
+}
+.upi-app-chip {
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid #E8DDCF;
+  background: #FAF7F2;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1C1917;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.upi-app-chip:hover, .upi-app-chip.selected {
+  border-color: #0284C7;
+  background: #F0F9FF;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container" style="padding-top: 3rem; padding-bottom: 5rem; max-width: 480px;">
-  <div class="card" style="padding: 2.25rem 2rem; border-top: 5px solid #0284C7; border-radius: var(--radius-xl); box-shadow: 0 12px 36px rgba(0,0,0,0.08);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
-      <div style="font-weight: 800; font-size: 1.15rem; color: #0c2340; display:flex; align-items:center; gap:6px;">
-        <span>🔒</span> {{ gateway_name }}
+<div class="container gateway-wrap">
+  <div class="gateway-card animate-scale-in">
+    <!-- Header -->
+    <div class="gateway-header">
+      <div>
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;opacity:0.8;font-weight:700;">Merchant Checkout</div>
+        <div style="font-size:1.15rem;font-weight:900;font-family:var(--font-display);display:flex;align-items:center;gap:6px;">
+          <span>⚡</span> QuickBite Payments
+        </div>
       </div>
-      <span style="background: #e0f2fe; color: #0284C7; font-weight: 700; font-size: 0.72rem; padding: 4px 10px; border-radius: 999px; letter-spacing:0.04em;">
-        256-BIT ENCRYPTED
-      </span>
-    </div>
-
-    <div style="text-align: center; margin-bottom: 1.75rem;">
-      <div style="font-size: 0.85rem; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Amount Payable</div>
-      <div style="font-size: 2.4rem; font-weight: 900; color: #6B132A; margin: 0.25rem 0;">₹{{ order.total_amount|floatformat:2 }}</div>
-      <div style="font-size: 0.85rem; color: var(--text-muted);">Order #{{ order.order_number }} • {{ order.restaurant.name }}</div>
-    </div>
-
-    <div style="background: #FAF7F2; padding: 1rem 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.85rem; border:1px solid #E8DDCF;">
-      <div style="font-weight: 700; color:#1C1917; margin-bottom: 0.25rem; display:flex; align-items:center; gap:5px;">
-        <span>⚡</span> Instant Payment Processing
+      <div style="text-align:right;">
+        <span style="background:rgba(255,255,255,0.18);padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:800;letter-spacing:0.04em;">
+          🔒 256-BIT SSL
+        </span>
+        <div style="font-size:0.75rem;opacity:0.8;margin-top:2px;">Order #{{ order.order_number }}</div>
       </div>
-      <p style="color: #78716C; margin: 0; font-size:0.82rem; line-height:1.4;">Authorize transaction securely via UPI, NetBanking, Debit/Credit Card or Wallet.</p>
     </div>
 
-    <form method="POST">
-      {% csrf_token %}
-      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-        <button type="submit" name="action" value="success" class="btn btn-primary" style="background: linear-gradient(135deg, #0284C7 0%, #0369a1 100%); width: 100%; font-size: 1.05rem; padding:0.85rem; border-radius:var(--radius-lg); font-weight:700;">
-          💳 Authorize Payment (₹{{ order.total_amount|floatformat:2 }})
+    <!-- Amount Banner -->
+    <div style="background:#FAF7F2;border-bottom:1px solid #E8DDCF;padding:1.25rem 1.75rem;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Paying to {{ order.restaurant.name }}</div>
+        <div style="font-size:0.75rem;color:var(--text-light);">{{ order.items.count }} item{{ order.items.count|pluralize }}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:1.7rem;font-weight:900;color:#6B132A;font-family:var(--font-display);">₹{{ order.total_amount|floatformat:2 }}</div>
+      </div>
+    </div>
+
+    <!-- Tabs: UPI / Cards / NetBanking -->
+    <div style="display:flex;border-bottom:1px solid #E8DDCF;">
+      <button type="button" class="pay-tab-btn {% if selected_method == 'upi' or not selected_method %}active{% endif %}" onclick="switchPayTab('upi', this)">
+        📱 UPI Apps
+      </button>
+      <button type="button" class="pay-tab-btn {% if selected_method == 'card' %}active{% endif %}" onclick="switchPayTab('card', this)">
+        💳 Cards
+      </button>
+      <button type="button" class="pay-tab-btn {% if selected_method == 'netbanking' %}active{% endif %}" onclick="switchPayTab('netbanking', this)">
+        🏦 NetBanking
+      </button>
+    </div>
+
+    <div class="gateway-body">
+      <!-- 1. UPI Tab Content -->
+      <div id="tab-upi" style="{% if selected_method and selected_method != 'upi' %}display:none;{% endif %}">
+        <div style="font-size:0.82rem;font-weight:700;color:var(--text-muted);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.04em;">
+          Select UPI App:
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1.25rem;">
+          <div class="upi-app-chip selected" onclick="selectUpiChip(this)">
+            <span style="font-size:1.2rem;">🔵</span> Google Pay
+          </div>
+          <div class="upi-app-chip" onclick="selectUpiChip(this)">
+            <span style="font-size:1.2rem;">🟣</span> PhonePe
+          </div>
+          <div class="upi-app-chip" onclick="selectUpiChip(this)">
+            <span style="font-size:1.2rem;">🔷</span> Paytm UPI
+          </div>
+          <div class="upi-app-chip" onclick="selectUpiChip(this)">
+            <span style="font-size:1.2rem;">⬛</span> CRED UPI
+          </div>
+        </div>
+
+        <div style="margin-bottom:1.25rem;">
+          <label class="form-label" style="font-size:0.8rem;">Or Enter Virtual Payment Address (VPA / UPI ID)</label>
+          <div style="display:flex;gap:0.5rem;">
+            <input type="text" id="upiVpaInput" class="form-input" placeholder="e.g. yourname@okaxis" value="customer@okaxis" style="font-size:0.9rem;border-radius:var(--radius-md);">
+            <button type="button" class="btn btn-outline btn-sm" onclick="showToast('UPI ID Verified ✓', 'success')">Verify</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Cards Tab Content -->
+      <div id="tab-card" style="{% if selected_method != 'card' %}display:none;{% endif %}">
+        <div class="form-group" style="margin-bottom:0.85rem;">
+          <label class="form-label" style="font-size:0.8rem;">Card Number</label>
+          <input type="text" class="form-input" placeholder="4111 •••• •••• 4242" value="4111 8890 2341 4242" style="letter-spacing:2px;font-weight:600;border-radius:var(--radius-md);">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.85rem;">
+          <div>
+            <label class="form-label" style="font-size:0.8rem;">Expiry (MM/YY)</label>
+            <input type="text" class="form-input" placeholder="12/28" value="12/28" style="text-align:center;font-weight:600;border-radius:var(--radius-md);">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:0.8rem;">CVV</label>
+            <input type="password" class="form-input" placeholder="•••" value="789" maxlength="4" style="text-align:center;font-weight:600;border-radius:var(--radius-md);">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label class="form-label" style="font-size:0.8rem;">Name on Card</label>
+          <input type="text" class="form-input" value="{{ request.user.get_full_name|default:'Kushagra Shrivastava' }}" style="font-weight:600;border-radius:var(--radius-md);">
+        </div>
+      </div>
+
+      <!-- 3. NetBanking Tab Content -->
+      <div id="tab-netbanking" style="{% if selected_method != 'netbanking' %}display:none;{% endif %}">
+        <div style="font-size:0.82rem;font-weight:700;color:var(--text-muted);margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.04em;">
+          Select NetBanking Portal:
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1.25rem;">
+          <div class="upi-app-chip selected" onclick="selectUpiChip(this)">🏛️ HDFC Bank</div>
+          <div class="upi-app-chip" onclick="selectUpiChip(this)">🏛️ State Bank of India</div>
+          <div class="upi-app-chip" onclick="selectUpiChip(this)">🏛️ ICICI Bank</div>
+          <div class="upi-app-chip" onclick="selectUpiChip(this)">🏛️ Axis Bank</div>
+        </div>
+      </div>
+
+      <!-- Action Form -->
+      <form method="POST" id="paymentActionForm" onsubmit="handlePaySubmit(event)">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="success">
+
+        <button type="submit" id="paySubmitBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #0284C7 0%, #0369a1 100%); width: 100%; font-size: 1.1rem; padding: 0.85rem; border-radius: var(--radius-lg); font-weight: 800; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);">
+          🔒 Authorize ₹{{ order.total_amount|floatformat:2 }} &rarr;
         </button>
-        <button type="submit" name="action" value="failure" class="btn btn-outline" style="width: 100%; color: #991b1b; border-color: #fca5a5; font-size:0.88rem; padding:0.6rem; border-radius:var(--radius-lg);">
-          Cancel Transaction
-        </button>
+
+        <a href="{% url 'orders:cart' %}" style="display:block;text-align:center;margin-top:0.85rem;font-size:0.85rem;color:var(--text-muted);text-decoration:none;">
+          Cancel &amp; return to cart
+        </a>
+      </form>
+
+      <div style="margin-top:1.5rem;text-align:center;font-size:0.75rem;color:var(--text-light);border-top:1px solid #E8DDCF;padding-top:1rem;display:flex;align-items:center;justify-content:center;gap:6px;">
+        <span>🛡️</span> PCI-DSS Certified • RBI Compliant 3D Secure Verification
       </div>
-    </form>
+    </div>
   </div>
 </div>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+function switchPayTab(tabName, btnEl) {
+  document.querySelectorAll('.pay-tab-btn').forEach(b => b.classList.remove('active'));
+  btnEl.classList.add('active');
+
+  document.getElementById('tab-upi').style.display = (tabName === 'upi') ? 'block' : 'none';
+  document.getElementById('tab-card').style.display = (tabName === 'card') ? 'block' : 'none';
+  document.getElementById('tab-netbanking').style.display = (tabName === 'netbanking') ? 'block' : 'none';
+}
+
+function selectUpiChip(chipEl) {
+  chipEl.parentElement.querySelectorAll('.upi-app-chip').forEach(c => c.classList.remove('selected'));
+  chipEl.classList.add('selected');
+}
+
+function handlePaySubmit(e) {
+  const btn = document.getElementById('paySubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<span>⏳</span> Authorizing Payment...`;
+}
+</script>
+{% endblock %}

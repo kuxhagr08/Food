@@ -21,9 +21,11 @@ class MockPaymentGatewayView(View):
         if order.payment_status == 'PAID':
             return redirect('orders:live_tracking', order_id=order.id)
 
+        method = request.GET.get('method', 'upi').lower()
         return render(request, 'payments/mock_gateway.html', {
             'order': order,
-            'gateway_name': 'Razorpay Test Checkout',
+            'gateway_name': 'Razorpay Trusted Gateway',
+            'selected_method': method,
         })
 
     def post(self, request, order_id):

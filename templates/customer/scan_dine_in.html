@@ -1,98 +1,190 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Scan QR Code & Dine-In - QuickBite{% endblock %}
+{% block title %}Scan QR Code & Dine-In — QuickBite{% endblock %}
+
+{% block extra_css %}
+<style>
+.scan-page-wrap {
+  padding-top: 2rem;
+  padding-bottom: 5rem;
+  max-width: 960px;
+}
+.scan-hero-card {
+  padding: 2.25rem 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, #FAF7F2 0%, #F5EFEB 100%);
+  border: 1.5px solid #E8DDCF;
+  border-radius: var(--radius-xl);
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+.scanner-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  background: #0f172a;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+  border: 2px solid #334155;
+}
+#qr-reader-video {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: var(--radius-lg);
+}
+.scanner-badge-success {
+  background: #10b981;
+  color: #fff;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulseScan 1.5s infinite;
+}
+@keyframes pulseScan {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.9; }
+}
+.qr-preview-card {
+  padding: 1.25rem;
+  text-align: center;
+  border: 1.5px solid #E8DDCF;
+  background: #FAF7F2;
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+.qr-preview-card:hover {
+  border-color: #6B132A;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container" style="padding-top: 2rem; padding-bottom: 5rem; max-width: 900px;">
+<div class="container scan-page-wrap">
   <!-- Header Banner -->
-  <div class="card" style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-color: #fed7aa; margin-bottom: 2rem;">
-    <span style="font-size: 3rem; display: block; margin-bottom: 0.5rem;">📱🍽️</span>
-    <h1 style="font-size: 1.85rem; font-weight: 800; color: #1c1917; margin-bottom: 0.5rem;">
-      Scan & Dine-In (Self-Order at Table)
+  <div class="scan-hero-card">
+    <span style="font-size: 2.8rem; display: block; margin-bottom: 0.5rem;">📱🍽️</span>
+    <h1 style="font-size: 1.9rem; font-weight: 900; color: #1C1917; margin-bottom: 0.4rem; font-family: var(--font-display);">
+      Scan & Dine-In Smart Table Service
     </h1>
-    <p style="color: #78350f; font-size: 1rem; max-width: 600px; margin: 0 auto;">
-      Just like at Burger King, scan the QR code on your table, order your favorite food, enter your table number, and your order rings directly inside the kitchen!
+    <p style="color: #78716C; font-size: 0.95rem; max-width: 620px; margin: 0 auto; line-height: 1.5;">
+      Point your phone camera at your restaurant table QR code to explore the live digital menu, order chef specials, and send tickets directly into the kitchen with <strong>Zero Delivery Fees</strong>.
     </p>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-bottom: 2.5rem;">
-    <!-- 1. Interactive Camera Scanner -->
-    <div class="card" style="padding: 1.5rem; text-align: center;">
-      <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem;">📷 Live Camera QR Scanner</h2>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Point your phone camera at any table QR code:
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.75rem; margin-bottom: 2.5rem;">
+    <!-- 1. Real Interactive Camera Scanner -->
+    <div class="card" style="padding: 1.75rem; text-align: center; border-radius: var(--radius-xl);">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:0.5rem;">
+        <span style="font-size:1.4rem;">📷</span>
+        <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--text-heading);">Live Camera QR Scanner</h2>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+        Point camera at any table QR code or upload a QR image:
       </p>
 
-      <div id="scannerBox" style="position: relative; width: 100%; height: 260px; background: #0f172a; border-radius: var(--radius-md); overflow: hidden; display: flex; align-items: center; justify-content: center; color: #94a3b8; margin-bottom: 1rem;">
-        <video id="qrVideo" style="width: 100%; height: 100%; object-fit: cover; display: none;" playsinline></video>
-        <div id="scannerPlaceholder" style="text-align: center; padding: 1rem;">
-          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎯</div>
-          <div style="font-weight: 600; color: #cbd5e1;">Camera Scanner Inactive</div>
-          <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Click 'Start Camera' below</div>
+      <!-- Viewport element for html5-qrcode -->
+      <div id="scannerBox" class="scanner-viewport">
+        <div id="scannerPlaceholder" style="text-align: center; padding: 2rem 1rem;">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎯</div>
+          <div style="font-weight: 700; color: #f1f5f9; font-size: 1.05rem;">Camera Scanner Ready</div>
+          <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 6px;">Tap 'Start Live Camera' below to scan in real-time</div>
         </div>
-        <!-- Scan Frame Overlay -->
-        <div id="scanOverlay" style="display: none; position: absolute; width: 180px; height: 180px; border: 3px solid #ff5200; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); animation: pulseFrame 1.5s infinite;"></div>
       </div>
 
-      <div style="display: flex; gap: 0.5rem; justify-content: center;">
-        <button type="button" id="startCamBtn" class="btn btn-primary btn-sm" onclick="startCamera()">Start Camera</button>
-        <button type="button" id="stopCamBtn" class="btn btn-outline btn-sm" style="display: none;" onclick="stopCamera()">Stop Camera</button>
+      <div id="scanResultBadge" style="display:none;margin-bottom:1rem;">
+        <div class="scanner-badge-success">
+          <span>✓</span> <span id="scanResultText">QR Code Detected! Redirecting...</span>
+        </div>
       </div>
+
+      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <button type="button" id="startCamBtn" class="btn btn-primary" style="background:#6B132A;border-color:#6B132A;padding:0.65rem 1.4rem;font-weight:700;" onclick="startRealQrScanner()">
+          🎥 Start Live Camera
+        </button>
+        <button type="button" id="stopCamBtn" class="btn btn-outline" style="display: none; color:#BE123C; border-color:#BE123C;" onclick="stopRealQrScanner()">
+          ⏹ Stop Camera
+        </button>
+        <button type="button" class="btn btn-outline" style="background:#FAF7F2;border-color:#E8DDCF;color:#1C1917;font-weight:600;" onclick="document.getElementById('qrImageUploadInput').click()">
+          📁 Upload QR Image
+        </button>
+        <input type="file" id="qrImageUploadInput" accept="image/*" style="display:none;" onchange="handleQrImageUpload(event)">
+      </div>
+      <div id="scannerStatusNote" style="font-size:0.75rem;color:var(--text-light);margin-top:0.75rem;">Supports all modern mobile and desktop webcams</div>
     </div>
 
-    <!-- 2. Instant Table & Restaurant Selector -->
-    <div class="card" style="padding: 1.5rem;">
-      <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem;">⚡ Instant Table Simulator</h2>
+    <!-- 2. Direct Dine-In Table Pass -->
+    <div class="card" style="padding: 1.75rem; border-radius: var(--radius-xl);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;">
+        <span style="font-size:1.4rem;">🏷️</span>
+        <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--text-heading);">Direct Table Access</h2>
+      </div>
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-        Simulate sitting at a restaurant table:
+        Already seated at your favorite dining table? Select restaurant &amp; table:
       </p>
 
       <div class="form-group">
-        <label class="form-label">Select Restaurant Store</label>
-        <select id="simRestaurantSelect" class="form-select">
+        <label class="form-label" style="font-weight:700;">Select Restaurant</label>
+        <select id="simRestaurantSelect" class="form-select" style="border-radius:var(--radius-lg);padding:0.75rem;font-weight:600;">
           {% for r in restaurants %}
             <option value="{{ r.slug }}">{{ r.name }} ({{ r.address|truncatechars:35 }})</option>
           {% endfor %}
         </select>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Enter Table Number</label>
-        <input type="text" id="simTableInput" class="form-input" value="4" placeholder="e.g. 1, 2, 3, 4, 12" style="font-weight: 800; font-size: 1.15rem; color: var(--brand-1);">
+      <div class="form-group" style="margin-top:1rem;">
+        <label class="form-label" style="font-weight:700;">Table Number</label>
+        <input type="number" id="simTableInput" class="form-input" value="4" min="1" max="99" style="font-weight: 900; font-size: 1.3rem; color: #6B132A; border-radius:var(--radius-lg); text-align:center;">
       </div>
 
-      <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 1rem; font-size: 1.05rem;" onclick="openSelectedTableMenu()">
+      <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 1.25rem; font-size: 1.05rem; padding:0.8rem; background: linear-gradient(135deg, #6B132A 0%, #831843 100%); font-weight:800; border-radius:var(--radius-lg);" onclick="openSelectedTableMenu()">
         Open Menu for Table &rarr;
       </button>
+
+      <div style="margin-top:1rem;background:#F0FDF4;border:1px solid #BBF7D0;padding:0.75rem;border-radius:var(--radius-md);display:flex;align-items:center;gap:8px;">
+        <span style="color:#16A34A;font-weight:900;">✓</span>
+        <span style="font-size:0.8rem;color:#166534;font-weight:600;">Instant kitchen dispatch &amp; zero delivery charge</span>
+      </div>
     </div>
   </div>
 
   <!-- 3. Pre-Generated Table QR Codes (Scan with real Phone Camera!) -->
-  <div class="card" style="padding: 1.75rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+  <div class="card" style="padding: 2rem; border-radius: var(--radius-xl);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
       <div>
-        <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Sample Table QR Codes (Live Test)</h2>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
-          Scan with your phone's camera or click any table to launch the menu:
+        <h2 style="font-size: 1.35rem; font-weight: 900; margin: 0; color:var(--text-heading); font-family:var(--font-display);">Official Restaurant Table QR Passes</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0;">
+          Scan these official QR codes using your phone's camera, or click any pass to instantly test dine-in ordering:
         </p>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
       {% for r in restaurants|slice:":4" %}
-        <div class="card" style="padding: 1.25rem; text-align: center; border: 2px dashed var(--border-color); background: #fafafa;">
-          <div style="font-weight: 800; font-size: 1rem; margin-bottom: 0.25rem;">{{ r.name }}</div>
-          <div style="font-size: 0.8rem; color: var(--brand-1); font-weight: 700; margin-bottom: 0.75rem;">TABLE #{{ forloop.counter }}</div>
+        <div class="qr-preview-card">
+          <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.2rem; color: #1C1917;">{{ r.name }}</div>
+          <div style="font-size: 0.78rem; color: #6B132A; font-weight: 800; text-transform:uppercase; letter-spacing:0.06em; margin-bottom: 0.75rem;">TABLE #{{ forloop.counter }}</div>
 
-          <!-- Dynamic QR Code pointing to this restaurant & table -->
-          <div style="background: #fff; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: var(--shadow-sm); margin-bottom: 0.75rem;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=http://127.0.0.1:8000/restaurants/{{ r.slug }}/?table={{ forloop.counter }}" alt="QR Code for Table {{ forloop.counter }}" style="width: 140px; height: 140px; display: block;">
+          <!-- Dynamic QR Code pointing to current host / domain -->
+          <div style="background: #fff; padding: 12px; border-radius: var(--radius-md); display: inline-block; box-shadow: 0 4px 14px rgba(0,0,0,0.06); margin-bottom: 0.85rem; border:1px solid #E8DDCF;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ request.scheme }}://{{ request.get_host }}/restaurants/{{ r.slug }}/?table={{ forloop.counter }}" alt="QR Code for Table {{ forloop.counter }}" style="width: 140px; height: 140px; display: block;">
           </div>
 
           <div>
-            <a href="{% url 'restaurants:detail' r.slug %}?table={{ forloop.counter }}" class="btn btn-outline btn-sm" style="width: 100%;">
-              Dine-In Table #{{ forloop.counter }} &rarr;
+            <a href="{% url 'restaurants:detail' r.slug %}?table={{ forloop.counter }}" class="btn btn-outline btn-sm" style="width: 100%; border-color:#6B132A; color:#6B132A; font-weight:700; border-radius:var(--radius-md);">
+              Launch Table #{{ forloop.counter }} &rarr;
             </a>
           </div>
         </div>
@@ -100,51 +192,141 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
-<style>
-@keyframes pulseFrame {
-  0%, 100% { border-color: #ff5200; transform: scale(1); }
-  50% { border-color: #f97316; transform: scale(1.03); }
-}
-</style>
+{% block extra_js %}
+<!-- HTML5-QRCode Official Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
-let videoStream = null;
+let html5QrScanner = null;
+let isScanning = false;
 
-async function startCamera() {
-  const video = document.getElementById('qrVideo');
-  const placeholder = document.getElementById('scannerPlaceholder');
-  const overlay = document.getElementById('scanOverlay');
-  const startBtn = document.getElementById('startCamBtn');
-  const stopBtn = document.getElementById('stopCamBtn');
-
+// Web Audio API Synthesized Scanner Beep
+function playScannerBeep() {
   try {
-    videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
-    video.srcObject = videoStream;
-    video.style.display = 'block';
-    placeholder.style.display = 'none';
-    overlay.style.display = 'block';
-    startBtn.style.display = 'none';
-    stopBtn.style.display = 'inline-flex';
-    video.play();
-    showToast("Camera active! Align QR code within frame.", "info");
-  } catch (err) {
-    showToast("Camera permission denied or camera not available on device.", "warning");
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(950, ctx.currentTime);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.18);
+  } catch (e) {
+    console.log("AudioContext fallback", e);
   }
 }
 
-function stopCamera() {
-  if (videoStream) {
-    videoStream.getTracks().forEach(track => track.stop());
-    videoStream = null;
+function handleDecodedQR(decodedText) {
+  playScannerBeep();
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+  const badge = document.getElementById('scanResultBadge');
+  const badgeText = document.getElementById('scanResultText');
+  if (badge && badgeText) {
+    badge.style.display = 'block';
+    badgeText.textContent = `Scanned: ${decodedText}`;
   }
-  document.getElementById('qrVideo').style.display = 'none';
-  document.getElementById('scannerPlaceholder').style.display = 'block';
-  document.getElementById('scanOverlay').style.display = 'none';
-  document.getElementById('startCamBtn').style.display = 'inline-flex';
-  document.getElementById('stopCamBtn').style.display = 'none';
+
+  showToast(`QR Code Scanned successfully! Loading menu...`, "success");
+  stopRealQrScanner();
+
+  setTimeout(() => {
+    // If it's a full URL or absolute path, navigate directly
+    if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
+      window.location.href = decodedText;
+    } else if (decodedText.startsWith('/')) {
+      window.location.href = decodedText;
+    } else {
+      // Check if text contains table or slug
+      const tableMatch = decodedText.match(/table=(\d+)/i) || decodedText.match(/table\s*#?\s*(\d+)/i);
+      const tableNum = tableMatch ? tableMatch[1] : '1';
+      const firstSlug = document.getElementById('simRestaurantSelect').value;
+      window.location.href = `/restaurants/${firstSlug}/?table=${encodeURIComponent(tableNum)}`;
+    }
+  }, 700);
+}
+
+async function startRealQrScanner() {
+  const box = document.getElementById('scannerBox');
+  const placeholder = document.getElementById('scannerPlaceholder');
+  const startBtn = document.getElementById('startCamBtn');
+  const stopBtn = document.getElementById('stopCamBtn');
+  const note = document.getElementById('scannerStatusNote');
+
+  if (placeholder) placeholder.style.display = 'none';
+
+  try {
+    if (!html5QrScanner) {
+      html5QrScanner = new Html5Qrcode("scannerBox");
+    }
+
+    const config = {
+      fps: 12,
+      qrbox: { width: 220, height: 220 },
+      aspectRatio: 1.0
+    };
+
+    await html5QrScanner.start(
+      { facingMode: "environment" },
+      config,
+      (decodedText, decodedResult) => {
+        handleDecodedQR(decodedText);
+      },
+      (errorMessage) => {
+        // Scanning in progress...
+      }
+    );
+
+    isScanning = true;
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-flex';
+    if (note) note.textContent = "Scanning active. Point camera steadily at the QR code.";
+    showToast("Camera active! Point at any QR code.", "info");
+  } catch (err) {
+    console.error("Camera startup error:", err);
+    if (placeholder) placeholder.style.display = 'block';
+    showToast("Camera access denied or unavailable. Use 'Upload QR Image' instead.", "warning");
+  }
+}
+
+async function stopRealQrScanner() {
+  if (html5QrScanner && isScanning) {
+    try {
+      await html5QrScanner.stop();
+      isScanning = false;
+    } catch (e) {
+      console.log("Stop error", e);
+    }
+  }
+  const placeholder = document.getElementById('scannerPlaceholder');
+  const startBtn = document.getElementById('startCamBtn');
+  const stopBtn = document.getElementById('stopCamBtn');
+  const note = document.getElementById('scannerStatusNote');
+
+  if (placeholder) placeholder.style.display = 'block';
+  if (startBtn) startBtn.style.display = 'inline-flex';
+  if (stopBtn) stopBtn.style.display = 'none';
+  if (note) note.textContent = "Scanner stopped.";
+}
+
+async function handleQrImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  showToast("Scanning uploaded QR image...", "info");
+  try {
+    const scanner = new Html5Qrcode("scannerBox");
+    const result = await scanner.scanFile(file, true);
+    handleDecodedQR(result);
+  } catch (err) {
+    console.error("File QR scan error:", err);
+    showToast("No valid QR code found in this image. Try another screenshot.", "error");
+  }
 }
 
 function openSelectedTableMenu() {
@@ -154,4 +336,3 @@ function openSelectedTableMenu() {
 }
 </script>
 {% endblock %}
-
