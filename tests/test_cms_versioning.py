@@ -8,7 +8,7 @@ User = get_user_model()
 
 @pytest.fixture
 def cms_setup(db):
-    admin = User.objects.create_superuser(email='cms_admin@quickbite.com', password='adminsecretpassword')
+    admin = User.objects.create_superuser(email='kuxhagr@quickbite.com', password='adminsecretpassword')
     page = CMSPage.objects.create(
         title='Homepage Test',
         route='/',

@@ -75,10 +75,12 @@
               <span class="portal-icon">⚡</span>
               <div><div class="portal-item-name">Admin Dashboard</div><div class="portal-item-sub">Analytics & dispatch</div></div>
             </a>
+            {% if request.user.username == 'kuxhagr' %}
             <a href="{% url 'cms:pages_list' %}" class="portal-item" role="menuitem">
               <span class="portal-icon">🎨</span>
               <div><div class="portal-item-name">CMS Visual Editor</div><div class="portal-item-sub">Live site editor</div></div>
             </a>
+            {% endif %}
             {% endif %}
             {% if is_kitchen or is_admin %}
             <a href="{% url 'kitchen:dashboard' %}" class="portal-item" role="menuitem">
@@ -191,7 +193,9 @@
       <div class="drawer-section-label">Staff Portals</div>
       {% if is_admin %}
       <a href="/admin-panel/" class="drawer-link drawer-link-portal">⚡ Admin Dashboard</a>
+      {% if request.user.username == 'kuxhagr' %}
       <a href="{% url 'cms:pages_list' %}" class="drawer-link drawer-link-portal">🎨 CMS Editor</a>
+      {% endif %}
       {% endif %}
       {% if is_kitchen or is_admin %}
       <a href="{% url 'kitchen:dashboard' %}" class="drawer-link drawer-link-portal">🍳 Kitchen KDS</a>
@@ -428,6 +432,11 @@
     }
 
     function applyPresetLocation(area, pincode, lat, lng) {
+      // Automatic correction: Noida pincodes are always 201301-201314, never 110020 (Delhi)
+      if (area && area.toLowerCase().includes('noida') && (!pincode || pincode.startsWith('110') || pincode === '110020')) {
+        pincode = '201301';
+      }
+
       localStorage.setItem('user_area', area);
       localStorage.setItem('user_pincode', pincode);
       localStorage.setItem('user_lat', lat);
@@ -453,10 +462,37 @@
 
       // Extract 6-digit Indian pincode if typed
       const pinMatch = val.match(/\b\d{6}\b/);
-      const pincode = pinMatch ? pinMatch[0] : '';
-      const area = val.replace(/\b\d{6}\b/, '').replace(/,/g, '').trim() || (pincode ? `Area ${pincode}` : 'New Delhi');
+      let pincode = pinMatch ? pinMatch[0] : '';
+      let area = val.replace(/\b\d{6}\b/, '').replace(/,/g, '').trim();
 
-      applyPresetLocation(area, pincode || '110001', 28.624, 77.222);
+      // Known accurate NCR localities mapping
+      const knownPins = {
+        '201301': { area: 'Noida Sec 18', lat: 28.570, lng: 77.320 },
+        '201304': { area: 'Noida Sec 93', lat: 28.520, lng: 77.380 },
+        '201307': { area: 'Noida Sec 12', lat: 28.595, lng: 77.338 },
+        '201309': { area: 'Noida Sec 62', lat: 28.628, lng: 77.365 },
+        '201310': { area: 'Greater Noida Pari Chowk', lat: 28.474, lng: 77.503 },
+        '110001': { area: 'Connaught Place', lat: 28.632, lng: 77.218 },
+        '110016': { area: 'Hauz Khas', lat: 28.549, lng: 77.200 },
+        '110017': { area: 'Saket', lat: 28.524, lng: 77.216 },
+        '110020': { area: 'Okhla Phase III', lat: 28.536, lng: 77.271 },
+        '122002': { area: 'Cyber City Gurugram', lat: 28.495, lng: 77.089 },
+        '201014': { area: 'Indirapuram Ghaziabad', lat: 28.639, lng: 77.371 }
+      };
+
+      if (pincode && knownPins[pincode]) {
+        if (!area) area = knownPins[pincode].area;
+        applyPresetLocation(area, pincode, knownPins[pincode].lat, knownPins[pincode].lng);
+        return;
+      }
+
+      if (area.toLowerCase().includes('noida')) {
+        if (!pincode || pincode.startsWith('110')) pincode = '201301';
+        applyPresetLocation(area, pincode, 28.570, 77.320);
+        return;
+      }
+
+      applyPresetLocation(area || (pincode ? `Area ${pincode}` : 'New Delhi'), pincode || '110001', 28.624, 77.222);
     }
 
     function detectGPSLocation() {
@@ -483,14 +519,35 @@
 
           try {
             // Free reverse-geocode via OpenStreetMap Nominatim
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
               headers: { 'Accept': 'application/json' }
             });
             if (res.ok) {
               const data = await res.json();
               const addr = data.address || {};
-              pincode = addr.postcode || '';
-              area = addr.suburb || addr.neighbourhood || addr.city_district || addr.road || addr.city || 'Detected Location';
+              pincode = (addr.postcode || '').trim();
+              const city = (addr.city || addr.town || addr.village || addr.city_district || addr.county || '').trim();
+              const suburb = (addr.suburb || addr.neighbourhood || addr.quarter || addr.residential || '').trim();
+              const state = (addr.state || '').trim();
+
+              area = suburb || addr.road || city || 'Detected Location';
+
+              // Strict border fix for Noida (Gautam Buddha Nagar, UP):
+              // OpenStreetMap frequently returns Delhi postal code 110020 for Noida border areas
+              const isNoidaCoords = (lat >= 28.45 && lat <= 28.65 && lng >= 77.29 && lng <= 77.48);
+              const isNoidaName = (city && city.toLowerCase().includes('noida')) ||
+                                  (area && area.toLowerCase().includes('noida')) ||
+                                  (addr.county && addr.county.toLowerCase().includes('gautam buddha nagar'));
+
+              if (isNoidaCoords || isNoidaName) {
+                if (!area.toLowerCase().includes('noida')) {
+                  area = suburb ? `${suburb}, Noida` : 'Noida';
+                }
+                // Noida pincodes always start with 2013 (201301 - 201314)
+                if (!pincode || !pincode.startsWith('2013') || pincode.startsWith('110')) {
+                  pincode = '201301';
+                }
+              }
             }
           } catch (err) {
             console.log("Reverse geocode fallback", err);
@@ -514,10 +571,17 @@
       );
     }
 
-    // Initialize location from localStorage on first load
+    // Initialize location from localStorage on first load & auto-fix any corrupted Noida pincode
     (function initSavedLocation() {
-      const savedArea = localStorage.getItem('user_area');
-      const savedPin = localStorage.getItem('user_pincode');
+      let savedArea = localStorage.getItem('user_area');
+      let savedPin = localStorage.getItem('user_pincode');
+
+      // Auto-correct Noida pincode if it had stored 110020 previously
+      if (savedArea && savedArea.toLowerCase().includes('noida') && (!savedPin || savedPin.startsWith('110') || savedPin === '110020')) {
+        savedPin = '201301';
+        localStorage.setItem('user_pincode', '201301');
+      }
+
       if (savedArea || savedPin) {
         updateNavLocationDisplay(savedArea, savedPin);
       }
@@ -547,23 +611,25 @@
       </div>
 
       <form onsubmit="handleManualLocation(event)" style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
-        <input type="text" id="manualLocationInput" class="form-input" placeholder="Enter Pincode (e.g. 110001, 201301) or Area..." style="flex:1;border-radius:var(--radius-lg);font-size:0.9rem;" required>
+        <input type="text" id="manualLocationInput" class="form-input" placeholder="Enter 6-digit Pincode (e.g. 201301, 110001) or Area..." style="flex:1;border-radius:var(--radius-lg);font-size:0.9rem;" required>
         <button type="submit" class="btn btn-primary" style="border-radius:var(--radius-lg);padding:0.6rem 1.2rem;">Apply</button>
       </form>
 
       <div>
         <div style="font-size:0.78rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.04em;">Popular Localities &amp; Pincodes:</div>
         <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Noida Sec-18', '201301', 28.570, 77.320)">📍 Noida Sec 18 (201301)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Noida Sec-62', '201309', 28.628, 77.365)">📍 Noida Sec 62 (201309)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Greater Noida', '201310', 28.474, 77.503)">📍 Greater Noida (201310)</button>
           <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Connaught Place', '110001', 28.632, 77.218)">📍 Connaught Place (110001)</button>
           <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Hauz Khas', '110016', 28.549, 77.200)">📍 Hauz Khas (110016)</button>
           <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Saket', '110017', 28.524, 77.216)">📍 Saket (110017)</button>
-          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Noida Sec-18', '201301', 28.570, 77.320)">📍 Noida Sec 18 (201301)</button>
-          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Cyber City', '122002', 28.495, 77.089)">📍 Cyber Hub (122002)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Cyber City', '122002', 28.495, 77.089)">📍 Cyber Hub Gurugram (122002)</button>
+          <button type="button" class="loc-chip-btn" onclick="applyPresetLocation('Indirapuram', '201014', 28.639, 77.371)">📍 Indirapuram Ghaziabad (201014)</button>
         </div>
       </div>
     </div>
   </div>
-  </script>
 
   {% block extra_js %}{% endblock %}
 </body>

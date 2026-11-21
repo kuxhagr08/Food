@@ -234,7 +234,9 @@
       <div class="admin-sub">Real-time platform overview · Dispatch control · Operations</div>
     </div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      {% if request.user.username == 'kuxhagr' %}
       <a href="{% url 'cms:pages_list' %}" class="admin-pill-btn secondary">🎨 CMS Editor</a>
+      {% endif %}
       <a href="{% url 'core:admin_export_csv' %}" class="admin-pill-btn primary">📥 Export CSV</a>
     </div>
   </div>

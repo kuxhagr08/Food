@@ -16,7 +16,21 @@ from apps.core.decorators import role_required
 from .models import CMSPage, CMSPageVersion
 from .sanitizer import sanitize_html, sanitize_text
 
-@role_required(['admin'])
+
+def kuxhagr_required(view_func):
+    """
+    Strict permission check: ensures only the master superuser 'kuxhagr'
+    has access to view or modify website content and CMS configurations.
+    """
+    def _wrapped(request, *args, **kwargs):
+        if not (request.user.is_authenticated and request.user.username == 'kuxhagr'):
+            messages.error(request, "Website editing and CMS are strictly restricted to master administrator (kuxhagr).")
+            return redirect('/')
+        return view_func(request, *args, **kwargs)
+    return _wrapped
+
+
+@kuxhagr_required
 def cms_pages_list_view(request):
     query = request.GET.get('q', '').strip()
     pages = CMSPage.objects.all().select_related('updated_by').order_by('route')
@@ -25,7 +39,7 @@ def cms_pages_list_view(request):
     return render(request, 'cms/pages_list.html', {'pages': pages, 'search_query': query})
 
 
-@role_required(['admin'])
+@kuxhagr_required
 def cms_visual_editor_view(request, page_id):
     page = get_object_or_404(CMSPage, id=page_id)
     latest_version = page.versions.filter(version_number=page.current_version).first()
@@ -35,7 +49,7 @@ def cms_visual_editor_view(request, page_id):
     })
 
 
-@role_required(['admin'])
+@kuxhagr_required
 def cms_version_history_view(request, page_id):
     page = get_object_or_404(CMSPage, id=page_id)
     versions = page.versions.all().select_related('created_by').order_by('-version_number')
@@ -50,8 +64,8 @@ class SavePageVersionAPI(APIView):
 
     def post(self, request, page_id):
         user = request.user
-        if user.role != 'admin' and not user.is_superuser:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        if not (user.is_authenticated and user.username == 'kuxhagr'):
+            return Response({'error': 'Website editing is strictly restricted to master administrator (kuxhagr).'}, status=status.HTTP_403_FORBIDDEN)
 
         page = get_object_or_404(CMSPage, id=page_id)
 
@@ -105,8 +119,8 @@ class UploadMediaAPI(APIView):
     MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 
     def post(self, request):
-        if request.user.role != 'admin' and not request.user.is_superuser:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        if not (request.user.is_authenticated and request.user.username == 'kuxhagr'):
+            return Response({'error': 'Website editing is strictly restricted to master administrator (kuxhagr).'}, status=status.HTTP_403_FORBIDDEN)
 
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
@@ -132,8 +146,8 @@ class RollbackVersionAPI(APIView):
 
     def post(self, request, page_id):
         user = request.user
-        if user.role != 'admin' and not user.is_superuser:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        if not (user.is_authenticated and user.username == 'kuxhagr'):
+            return Response({'error': 'Website editing is strictly restricted to master administrator (kuxhagr).'}, status=status.HTTP_403_FORBIDDEN)
 
         page = get_object_or_404(CMSPage, id=page_id)
         target_version_num = int(request.data.get('target_version', 1))

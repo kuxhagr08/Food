@@ -15,7 +15,7 @@ def cms_block(context, route, key, default_content=""):
     """
     request = context.get('request')
     is_edit_mode = False
-    if request and request.GET.get('cms_edit') == '1' and (request.user.is_authenticated and (request.user.role == 'admin' or request.user.is_superuser)):
+    if request and request.GET.get('cms_edit') == '1' and (request.user.is_authenticated and request.user.username == 'kuxhagr'):
         is_edit_mode = True
 
     cache_key = f"cms_block_{route}_{key}"
@@ -51,7 +51,7 @@ def cms_block(context, route, key, default_content=""):
 def cms_image(context, route, key, default_src="", alt_text=""):
     request = context.get('request')
     is_edit_mode = False
-    if request and request.GET.get('cms_edit') == '1' and (request.user.is_authenticated and (request.user.role == 'admin' or request.user.is_superuser)):
+    if request and request.GET.get('cms_edit') == '1' and (request.user.is_authenticated and request.user.username == 'kuxhagr'):
         is_edit_mode = True
 
     cache_key = f"cms_img_{route}_{key}"

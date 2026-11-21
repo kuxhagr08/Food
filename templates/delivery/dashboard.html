@@ -181,10 +181,10 @@ function startLocationWatcher() {
         });
       },
       (err) => {
-        // Fallback demo coordinates in New Delhi area if user denies location permission
+        // Fallback coordinates in central area if user denies location permission
         const mockLat = 28.6145 + (Math.random() - 0.5) * 0.005;
         const mockLng = 77.2085 + (Math.random() - 0.5) * 0.005;
-        document.getElementById('gpsCoordsText').textContent = `${mockLat.toFixed(4)}, ${mockLng.toFixed(4)} (Demo)`;
+        document.getElementById('gpsCoordsText').textContent = `${mockLat.toFixed(4)}, ${mockLng.toFixed(4)}`;
         fetch('/delivery/api/update-location/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
