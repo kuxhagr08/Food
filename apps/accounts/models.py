@@ -71,6 +71,13 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         return f"{self.first_name} {self.last_name}".strip()
 
     @property
+    def username(self):
+        """Compatibility property for templates and tools expecting user.username."""
+        if self.first_name:
+            return self.first_name
+        return self.email.split('@')[0] if '@' in self.email else self.email
+
+    @property
     def is_admin(self):
         return self.role == 'admin' or self.is_superuser
 

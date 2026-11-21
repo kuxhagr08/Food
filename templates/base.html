@@ -5,232 +5,209 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>{% block title %}{{ SITE_NAME }} - Lightning-Fast Food Delivery{% endblock %}</title>
+  <title>{% block title %}{{ SITE_NAME }} — Lightning-Fast Food Delivery{% endblock %}</title>
 
-  <!-- Google Fonts: Space Grotesk + Plus Jakarta Sans -->
+  <!-- Google Fonts: Space Grotesk + Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- Leaflet Maps CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
   <!-- Design System CSS -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  
-  <style>
-    /* Swiggy/Zomato style header enhancements */
-    .header-location {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-heading);
-      padding: 0.4rem 0.75rem;
-      border-radius: var(--radius-full);
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-color);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-    .header-location:hover {
-      background: #fff;
-      border-color: var(--brand-1);
-      box-shadow: var(--shadow-sm);
-    }
-    .header-location .loc-city {
-      font-weight: 700;
-      border-bottom: 2px solid var(--brand-1);
-    }
-    
-    /* Portal Dropdown Menu */
-    .portal-dropdown-wrapper {
-      position: relative;
-    }
-    .portal-trigger-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.45rem 0.9rem;
-      font-size: 0.85rem;
-      font-weight: 700;
-      border-radius: var(--radius-full);
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(49, 46, 129, 0.25);
-      transition: all 0.2s ease;
-    }
-    .portal-trigger-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(49, 46, 129, 0.35);
-    }
-    .portal-menu-card {
-      display: none;
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      width: 250px;
-      background: #ffffff;
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-      padding: 0.6rem;
-      z-index: 1050;
-      animation: popIn 0.2s ease-out;
-    }
-    .portal-menu-card.show {
-      display: block;
-    }
-    .portal-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      padding: 0.6rem 0.8rem;
-      border-radius: var(--radius-sm);
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-main);
-      text-decoration: none;
-      transition: all 0.15s ease;
-    }
-    .portal-menu-item:hover {
-      background: var(--bg-subtle);
-      color: var(--brand-1);
-    }
-    @keyframes popIn {
-      from { opacity: 0; transform: translateY(-8px) scale(0.96); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-  </style>
 
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-  <!-- ── TOP FIXED HEADER ──────────────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       FIXED TOP HEADER
+  ══════════════════════════════════════════════════════════════ -->
   <header class="main-header" id="mainHeader">
     <div class="container header-inner">
-      <!-- Left: Logo & Location -->
-      <div style="display:flex;align-items:center;gap:1.25rem;flex-shrink:0;">
+
+      <!-- Left: Logo + Location (desktop) -->
+      <div class="header-left">
         <a href="/" class="brand-logo">
           <span class="logo-emoji">🛵</span>
           <span>{{ SITE_NAME }}</span>
         </a>
-        
-        <!-- Swiggy style location selector -->
         <div class="header-location hidden-mobile" title="Change delivery location">
-          <span style="color:var(--brand-1);">📍</span>
+          <span class="loc-pin">📍</span>
           <span class="loc-city">Connaught Place</span>
-          <span style="color:var(--text-muted);font-size:0.8rem;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">New Delhi</span>
-          <span style="font-size:0.75rem;color:var(--text-light);">▾</span>
+          <span class="loc-sub">New Delhi ▾</span>
         </div>
       </div>
 
-      <!-- Center: Clean Customer Nav Links -->
-      <nav class="nav-links">
-        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
-          <span>🏠 Home</span>
-        </a>
-        <a href="{% url 'restaurants:list' %}" class="nav-link {% if '/restaurants/' in request.path %}active{% endif %}">
-          <span>🍽️ Restaurants</span>
-        </a>
-        <a href="{% url 'core:scan' %}" class="nav-link special {% if '/scan/' in request.path %}active{% endif %}">
-          <span>📷 Scan &amp; Dine</span>
-        </a>
-        <a href="{% url 'core:about' %}" class="nav-link">
-          <span>About</span>
-        </a>
+      <!-- Center: Nav links (desktop only ≥1024px) -->
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a>
+        <a href="{% url 'restaurants:list' %}" class="nav-link {% if '/restaurants/' in request.path %}active{% endif %}">Restaurants</a>
+        <a href="{% url 'core:scan' %}" class="nav-link nav-link-special {% if '/scan/' in request.path %}active{% endif %}">📷 Scan & Dine</a>
+        <a href="{% url 'core:about' %}" class="nav-link">About</a>
       </nav>
 
-      <!-- Right: Portals + Cart + User Auth -->
+      <!-- Right: Actions -->
       <div class="header-actions">
 
-        <!-- Staff / Role Portals Dropdown (Clean, compact, not cluttered!) -->
+        <!-- Portals dropdown (staff only) — desktop -->
         {% if is_admin or is_kitchen or is_delivery %}
-          <div class="portal-dropdown-wrapper">
-            <button class="portal-trigger-btn" onclick="togglePortalMenu(event)">
-              <span>⚡ Portals</span>
-              <span style="font-size:0.7rem;">▾</span>
-            </button>
-            <div class="portal-menu-card" id="portalMenuCard">
-              <div style="font-size:0.7rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;padding:0.3rem 0.5rem;letter-spacing:0.05em;">
-                Staff &amp; Admin Consoles
-              </div>
-              {% if is_admin %}
-                <a href="/admin-panel/" class="portal-menu-item">
-                  <span style="font-size:1.1rem;">⚡</span>
-                  <div>
-                    <div>Admin Dashboard</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">Analytics, dispatch, users</div>
-                  </div>
-                </a>
-                <a href="{% url 'cms:pages_list' %}" class="portal-menu-item">
-                  <span style="font-size:1.1rem;">🎨</span>
-                  <div>
-                    <div>CMS Visual Editor</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">Inline live site editor</div>
-                  </div>
-                </a>
-              {% endif %}
-              {% if is_kitchen or is_admin %}
-                <a href="{% url 'kitchen:dashboard' %}" class="portal-menu-item">
-                  <span style="font-size:1.1rem;">🍳</span>
-                  <div>
-                    <div>Kitchen KDS Screen</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">Sound alerts &amp; order prep</div>
-                  </div>
-                </a>
-              {% endif %}
-              {% if is_delivery or is_admin %}
-                <a href="{% url 'delivery:dashboard' %}" class="portal-menu-item">
-                  <span style="font-size:1.1rem;">🏍️</span>
-                  <div>
-                    <div>Delivery Partner Portal</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">GPS tracking &amp; orders</div>
-                  </div>
-                </a>
-              {% endif %}
-              {% if is_admin %}
-                <div style="border-top:1px solid var(--border-color);margin:0.4rem 0;"></div>
-                <a href="/admin/" class="portal-menu-item" style="color:var(--text-muted);">
-                  <span>⚙️</span> Django Admin
-                </a>
-              {% endif %}
-            </div>
+        <div class="portal-wrapper hidden-mobile" id="portalWrapper">
+          <button class="portal-trigger" onclick="togglePortal(event)" aria-expanded="false" aria-haspopup="true">
+            <span>⚡</span> Portals <span class="portal-arrow">▾</span>
+          </button>
+          <div class="portal-dropdown" id="portalDropdown" role="menu">
+            <div class="portal-label">Staff Consoles</div>
+            {% if is_admin %}
+            <a href="/admin-panel/" class="portal-item" role="menuitem">
+              <span class="portal-icon">⚡</span>
+              <div><div class="portal-item-name">Admin Dashboard</div><div class="portal-item-sub">Analytics & dispatch</div></div>
+            </a>
+            <a href="{% url 'cms:pages_list' %}" class="portal-item" role="menuitem">
+              <span class="portal-icon">🎨</span>
+              <div><div class="portal-item-name">CMS Visual Editor</div><div class="portal-item-sub">Live site editor</div></div>
+            </a>
+            {% endif %}
+            {% if is_kitchen or is_admin %}
+            <a href="{% url 'kitchen:dashboard' %}" class="portal-item" role="menuitem">
+              <span class="portal-icon">🍳</span>
+              <div><div class="portal-item-name">Kitchen KDS</div><div class="portal-item-sub">Sound alerts & orders</div></div>
+            </a>
+            {% endif %}
+            {% if is_delivery or is_admin %}
+            <a href="{% url 'delivery:dashboard' %}" class="portal-item" role="menuitem">
+              <span class="portal-icon">🏍️</span>
+              <div><div class="portal-item-name">Delivery Portal</div><div class="portal-item-sub">GPS tracking & orders</div></div>
+            </a>
+            {% endif %}
+            {% if is_admin %}
+            <div class="portal-divider"></div>
+            <a href="/admin/" class="portal-item portal-item-muted" role="menuitem">
+              <span class="portal-icon">⚙️</span> Django Admin
+            </a>
+            {% endif %}
           </div>
+        </div>
         {% endif %}
 
-        <!-- Cart Button -->
-        <a href="{% url 'orders:cart' %}" class="btn btn-outline btn-sm" style="position:relative;padding:0.45rem 1rem;">
-          <span style="font-size:1.1rem;">🛒</span>
-          <span class="hidden-mobile">Cart</span>
-          <span class="cart-badge-count {% if cart_count > 0 %}visible{% endif %}">{{ cart_count }}</span>
+        <!-- Cart button -->
+        <a href="{% url 'orders:cart' %}" class="header-cart-btn" aria-label="Cart">
+          <span class="cart-icon-wrap">
+            🛒
+            <span class="cart-badge {% if cart_count > 0 %}visible{% endif %}">{{ cart_count }}</span>
+          </span>
+          <span class="hidden-mobile cart-label">Cart</span>
         </a>
 
-        <!-- Auth & Profile -->
+        <!-- User menu (desktop) -->
         {% if user.is_authenticated %}
-          <div style="display:flex;align-items:center;gap:0.4rem;">
-            <a href="{% url 'accounts:profile' %}" class="btn btn-outline btn-sm" style="font-weight:700;">
-              <span>👤</span>
-              <span class="hidden-mobile">{{ user.first_name|default:user.email|truncatechars:10 }}</span>
-            </a>
-            <a href="{% url 'accounts:logout' %}" class="btn btn-ghost btn-sm" title="Log out">
-              <span>🚪</span>
-            </a>
+        <div class="user-menu-wrapper hidden-mobile" id="userMenuWrapper">
+          <button class="user-trigger" onclick="toggleUserMenu(event)" aria-expanded="false">
+            <span class="user-avatar">{{ user.first_name|first|upper|default:"U" }}</span>
+            <span class="user-name-text">{{ user.first_name|default:user.email|truncatechars:10 }}</span>
+            <span class="portal-arrow">▾</span>
+          </button>
+          <div class="user-dropdown" id="userDropdown" role="menu">
+            <div class="user-dropdown-header">
+              <div class="user-dropdown-name">{{ user.get_full_name|default:user.email }}</div>
+              <div class="user-dropdown-email">{{ user.email }}</div>
+              {% if is_admin %}<span class="role-chip admin">Admin</span>{% endif %}
+              {% if is_kitchen %}<span class="role-chip kitchen">Kitchen</span>{% endif %}
+              {% if is_delivery %}<span class="role-chip delivery">Rider</span>{% endif %}
+            </div>
+            <a href="{% url 'accounts:profile' %}" class="user-dropdown-item" role="menuitem">👤 My Profile</a>
+            <a href="{% url 'orders:history' %}" class="user-dropdown-item" role="menuitem">📦 My Orders</a>
+            {% if is_admin %}
+            <a href="/admin-panel/" class="user-dropdown-item" role="menuitem">⚡ Admin Panel</a>
+            {% endif %}
+            <div class="portal-divider"></div>
+            <a href="{% url 'accounts:logout' %}" class="user-dropdown-item user-dropdown-logout" role="menuitem">🚪 Sign Out</a>
           </div>
+        </div>
         {% else %}
-          <a href="{% url 'accounts:login' %}" class="btn btn-outline btn-sm">Log In</a>
-          <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm">Sign Up</a>
+        <a href="{% url 'accounts:login' %}" class="btn btn-outline btn-sm hidden-mobile">Log In</a>
+        <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm hidden-mobile">Sign Up</a>
         {% endif %}
-      </div>
-    </div>
+
+        <!-- Hamburger (mobile only) -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleDrawer()" aria-label="Open menu" aria-expanded="false">
+          <span class="ham-line"></span>
+          <span class="ham-line"></span>
+          <span class="ham-line"></span>
+        </button>
+
+      </div><!-- /header-actions -->
+    </div><!-- /header-inner -->
   </header>
 
-  <!-- ── TOAST NOTIFICATIONS ─────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       MOBILE SLIDE-OUT DRAWER
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <nav class="mobile-drawer" id="mobileDrawer" aria-label="Mobile navigation">
+
+    <!-- Drawer header -->
+    <div class="drawer-header">
+      <div class="drawer-brand">🛵 {{ SITE_NAME }}</div>
+      <button class="drawer-close-btn" onclick="closeDrawer()" aria-label="Close menu">✕</button>
+    </div>
+
+    <!-- User info in drawer -->
+    {% if user.is_authenticated %}
+    <div class="drawer-user-card">
+      <div class="drawer-user-avatar">{{ user.first_name|first|upper|default:"U" }}</div>
+      <div>
+        <div class="drawer-user-name">{{ user.get_full_name|default:user.email }}</div>
+        <div class="drawer-user-email">{{ user.email }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Main nav links -->
+    <div class="drawer-section">
+      <div class="drawer-section-label">Explore</div>
+      <a href="/" class="drawer-link {% if request.path == '/' %}active{% endif %}">🏠 Home</a>
+      <a href="{% url 'restaurants:list' %}" class="drawer-link {% if '/restaurants/' in request.path %}active{% endif %}">🍽️ Restaurants</a>
+      <a href="{% url 'core:scan' %}" class="drawer-link {% if '/scan/' in request.path %}active{% endif %}">📷 Scan & Dine</a>
+      <a href="{% url 'core:about' %}" class="drawer-link">ℹ️ About Us</a>
+      <a href="{% url 'core:contact' %}" class="drawer-link">📞 Contact</a>
+    </div>
+
+    <!-- Staff portals in drawer -->
+    {% if is_admin or is_kitchen or is_delivery %}
+    <div class="drawer-section">
+      <div class="drawer-section-label">Staff Portals</div>
+      {% if is_admin %}
+      <a href="/admin-panel/" class="drawer-link drawer-link-portal">⚡ Admin Dashboard</a>
+      <a href="{% url 'cms:pages_list' %}" class="drawer-link drawer-link-portal">🎨 CMS Editor</a>
+      {% endif %}
+      {% if is_kitchen or is_admin %}
+      <a href="{% url 'kitchen:dashboard' %}" class="drawer-link drawer-link-portal">🍳 Kitchen KDS</a>
+      {% endif %}
+      {% if is_delivery or is_admin %}
+      <a href="{% url 'delivery:dashboard' %}" class="drawer-link drawer-link-portal">🏍️ Delivery Portal</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Auth section at bottom -->
+    <div class="drawer-footer">
+      {% if user.is_authenticated %}
+      <a href="{% url 'accounts:profile' %}" class="drawer-link">👤 My Profile</a>
+      <a href="{% url 'orders:history' %}" class="drawer-link">📦 My Orders</a>
+      <a href="{% url 'accounts:logout' %}" class="drawer-logout-btn">🚪 Sign Out</a>
+      {% else %}
+      <a href="{% url 'accounts:login' %}" class="btn btn-outline w-full" style="margin-bottom:0.75rem;">Log In</a>
+      <a href="{% url 'accounts:register' %}" class="btn btn-primary w-full">Sign Up</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TOAST NOTIFICATIONS
+  ══════════════════════════════════════════════════════════════ -->
   <div id="toastContainer" class="toast-container">
     {% if messages %}
       {% for message in messages %}
@@ -242,13 +219,17 @@
     {% endif %}
   </div>
 
-  <!-- ── MAIN CONTENT ────────────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════════════════════════ -->
   <main style="flex-grow:1;">
     {% block content %}{% endblock %}
   </main>
 
-  <!-- ── MOBILE BOTTOM NAVIGATION (Fixed, never jumps) ──────────────── -->
-  <nav class="mobile-bottom-nav">
+  <!-- ══════════════════════════════════════════════════════════════
+       MOBILE BOTTOM NAVIGATION
+  ══════════════════════════════════════════════════════════════ -->
+  <nav class="mobile-bottom-nav" aria-label="Bottom navigation">
     <a href="/" class="mobile-nav-item {% if request.path == '/' %}active{% endif %}">
       <span class="nav-icon">🏠</span>
       <span class="nav-label">Home</span>
@@ -257,9 +238,9 @@
       <span class="nav-icon">🍽️</span>
       <span class="nav-label">Explore</span>
     </a>
-    <a href="{% url 'core:scan' %}" class="mobile-nav-item scan-btn {% if '/scan/' in request.path or '/dine-in/' in request.path %}active{% endif %}">
+    <a href="{% url 'core:scan' %}" class="mobile-nav-item scan-btn {% if '/scan/' in request.path or '/dine-in/' in request.path %}active{% endif %}" aria-label="Scan QR">
       <span class="nav-icon">📷</span>
-      <span class="nav-label" style="color:#fff;">Scan</span>
+      <span class="nav-label">Scan</span>
     </a>
     <a href="{% url 'orders:cart' %}" class="mobile-nav-item {% if '/orders/cart/' in request.path %}active{% endif %}" style="position:relative;">
       <span class="nav-icon">🛒</span>
@@ -279,18 +260,16 @@
     {% endif %}
   </nav>
 
-  <!-- ── MODERN FOOTER ───────────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════════ -->
   <footer class="site-footer">
     <div class="container">
       <div class="footer-grid">
         <div>
           <div class="footer-brand-logo">🛵 {{ SITE_NAME }}</div>
-          <p class="footer-desc">
-            Lightning-fast 20-minute delivery from top curated restaurants, cloud kitchens &amp; cafes.
-          </p>
-          <div style="display:flex;gap:0.75rem;margin-top:1rem;font-size:1.3rem;">
-            <span>📸</span><span>🐦</span><span>📘</span><span>▶️</span>
-          </div>
+          <p class="footer-desc">Lightning-fast 20-minute delivery from top curated restaurants, cloud kitchens &amp; cafes.</p>
+          <div style="display:flex;gap:0.75rem;margin-top:1rem;font-size:1.3rem;">📸 🐦 📘 ▶️</div>
         </div>
         <div>
           <h4 class="footer-heading">Company</h4>
@@ -306,21 +285,17 @@
           <ul class="footer-links">
             <li><a href="{% url 'kitchen:dashboard' %}">Kitchen KDS Screen</a></li>
             <li><a href="{% url 'delivery:dashboard' %}">Delivery Partner Portal</a></li>
-            <li><a href="/admin-panel/">Admin Operations Control</a></li>
+            <li><a href="/admin-panel/">Admin Operations</a></li>
           </ul>
         </div>
         <div>
           <h4 class="footer-heading">Need Help?</h4>
-          <p class="footer-desc" style="margin-bottom:0.4rem;color:#fff;font-weight:700;">📞 1800 200 4545 (Toll Free)</p>
+          <p class="footer-desc" style="color:#fff;font-weight:700;">📞 1800 200 4545 (Toll Free)</p>
           <p class="footer-desc">✉️ support@quickbite.com</p>
-          <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.08);border-radius:var(--radius-sm);font-size:0.78rem;color:#a0a0b8;">
-            ⚡ 24x7 Customer Support &amp; Live Tracking
-          </div>
+          <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.08);border-radius:var(--radius-sm);font-size:0.78rem;color:#a0a0b8;">⚡ 24x7 Customer Support &amp; Live Tracking</div>
         </div>
       </div>
-      <div class="footer-bottom">
-        &copy; {% now "Y" %} {{ SITE_NAME }}. Engineered with ❤️ for food lovers.
-      </div>
+      <div class="footer-bottom">&copy; {% now "Y" %} {{ SITE_NAME }}. Engineered with ❤️ for food lovers.</div>
     </div>
   </footer>
 
@@ -330,27 +305,87 @@
   <script src="{% static 'js/audio_alert.js' %}"></script>
 
   <script>
-    // Header scroll blur effect
+    // ── Header scroll effect ──────────────────────────────────────
     const header = document.getElementById('mainHeader');
     window.addEventListener('scroll', () => {
       header.classList.toggle('scrolled', window.scrollY > 10);
     }, { passive: true });
 
-    // Portal Dropdown Toggle
-    function togglePortalMenu(e) {
+    // ── Portal dropdown ───────────────────────────────────────────
+    function togglePortal(e) {
       e.stopPropagation();
-      const menu = document.getElementById('portalMenuCard');
-      if (menu) menu.classList.toggle('show');
+      const dd = document.getElementById('portalDropdown');
+      const btn = e.currentTarget;
+      const isOpen = dd.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen);
+      // Close user menu if open
+      closeUserMenu();
     }
 
-    document.addEventListener('click', (e) => {
-      const menu = document.getElementById('portalMenuCard');
-      if (menu && !menu.contains(e.target)) {
-        menu.classList.remove('show');
+    function closePortal() {
+      const dd = document.getElementById('portalDropdown');
+      if (dd) {
+        dd.classList.remove('open');
+        const btn = document.querySelector('.portal-trigger');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
       }
+    }
+
+    // ── User dropdown ─────────────────────────────────────────────
+    function toggleUserMenu(e) {
+      e.stopPropagation();
+      const dd = document.getElementById('userDropdown');
+      const btn = e.currentTarget;
+      if (!dd) return;
+      const isOpen = dd.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen);
+      closePortal();
+    }
+
+    function closeUserMenu() {
+      const dd = document.getElementById('userDropdown');
+      if (dd) {
+        dd.classList.remove('open');
+        const btn = document.querySelector('.user-trigger');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', () => {
+      closePortal();
+      closeUserMenu();
     });
 
-    // Auto-dismiss toasts
+    // ── Mobile drawer ─────────────────────────────────────────────
+    function toggleDrawer() {
+      const drawer = document.getElementById('mobileDrawer');
+      const overlay = document.getElementById('drawerOverlay');
+      const btn = document.getElementById('hamburgerBtn');
+      const isOpen = drawer.classList.toggle('open');
+      overlay.classList.toggle('open', isOpen);
+      btn.setAttribute('aria-expanded', isOpen);
+      btn.classList.toggle('active', isOpen);
+      document.body.classList.toggle('drawer-open', isOpen);
+    }
+
+    function closeDrawer() {
+      const drawer = document.getElementById('mobileDrawer');
+      const overlay = document.getElementById('drawerOverlay');
+      const btn = document.getElementById('hamburgerBtn');
+      drawer.classList.remove('open');
+      overlay.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.classList.remove('active');
+      document.body.classList.remove('drawer-open');
+    }
+
+    // Close drawer on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeDrawer(); closePortal(); closeUserMenu(); }
+    });
+
+    // ── Auto-dismiss toasts ───────────────────────────────────────
     document.querySelectorAll('.toast').forEach(t => {
       setTimeout(() => {
         t.style.transition = 'opacity 0.4s, transform 0.4s';

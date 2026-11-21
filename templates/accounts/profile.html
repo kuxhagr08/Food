@@ -7,7 +7,7 @@
 <div class="container" style="padding-top: 2rem; padding-bottom: 5rem; max-width: 900px;">
   <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1.5rem;">My Profile</h1>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+  <div class="grid-2">
     <!-- Profile Info Card -->
     <div class="card" style="padding: 1.5rem;">
       <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Personal Details</h2>
@@ -15,10 +15,10 @@
         {% csrf_token %}
         <input type="hidden" name="update_profile" value="1">
         <div class="form-group">
-          <label class="form-label">Email (Username)</label>
-          <input type="email" value="{{ user.email }}" class="form-input" disabled style="background:var(--bg-subtle);">
+          <label class="form-label">Email / Username</label>
+          <input type="text" value="{{ user.email }}" class="form-input" disabled style="background:var(--bg-subtle);">
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem;">
           <div class="form-group">
             <label class="form-label">First Name</label>
             <input type="text" name="first_name" value="{{ user.first_name }}" class="form-input">
@@ -30,13 +30,16 @@
         </div>
         <div class="form-group">
           <label class="form-label">Phone</label>
-          <input type="text" name="phone" value="{{ user.phone|default:'' }}" class="form-input">
+          <input type="text" name="phone" value="{{ user.phone|default:'' }}" class="form-input" placeholder="+91 9876543210">
         </div>
         <div class="form-group">
           <label class="form-label">Account Role</label>
           <span class="role-pill {{ user.role }}">{{ user.get_role_display }}</span>
         </div>
-        <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 0.5rem;">Save Changes</button>
+        <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 1rem; flex-wrap: wrap;">
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+          <a href="{% url 'accounts:logout' %}" class="btn btn-danger btn-sm" style="margin-left: auto;">🚪 Sign Out</a>
+        </div>
       </form>
     </div>
 
