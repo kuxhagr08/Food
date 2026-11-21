@@ -210,3 +210,9 @@ else:
 
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False  # Required for fetch/ajax csrf tokens from cookie
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://192.168.1.3:8000',
+    'http://0.0.0.0:8000',
+]
